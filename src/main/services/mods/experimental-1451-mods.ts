@@ -38,6 +38,8 @@ const BEATSAVERSHARP_ID = 145106;
 const BEATSAVERDOWNLOADER_ID = 145107;
 const BEATSAVERUPDATER_ID = 145108;
 const WHYISTHERENOLEADERBOARD_ID = 145109;
+const INIPARSER_ID = 145110;
+const SCORESABERSHARP_ID = 145111;
 
 const placeholderAuthor = { id: 0, username: "TheMysticle", githubId: "TheMysticle", sponsorUrl: "", displayName: "TheMysticle", bio: "" };
 
@@ -126,6 +128,24 @@ export function getExperimental1451Mods(): BbmFullMod[] {
             dependencies: [BSIPA_ID, SIRAUTIL_ID, BSML_ID],
         }),
         fullMod({
+            id: INIPARSER_ID,
+            name: "Ini Parser",
+            summary: "[Experimental 1.45.1 port] .NET library for reading/writing INI data. Redistributed at the exact assembly identity (INIFileParser, Version=2.5.2.0) BS_Utils's IniFile utility references -- BeatMods' current listing ships a newer, renamed build (assembly INIParser 2.5.9.0) that does NOT satisfy that reference and causes a TypeLoadException at plugin startup.",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/rickyah/ini-parser",
+            downloadUrl: "https://github.com/TheMysticle/beatsaber-experimental-libs/releases/download/v2.5.2.0/INIFileParser-2.5.2.0.zip",
+            modVersion: "2.5.2",
+        }),
+        fullMod({
+            id: SCORESABERSHARP_ID,
+            name: "ScoreSaberSharp",
+            summary: "[Experimental 1.45.1 port] Official C# library for the ScoreSaber API. Unmodified -- pulled straight from BeatMods' own CDN (byte-identical), since it's closed-source and version-agnostic.",
+            category: BbmCategories.Library,
+            gitUrl: "https://scoresaber.com",
+            downloadUrl: "https://beatmods.com/cdn/mod/8713168c598577ee7c73fa3cf0e26f5c.zip",
+            modVersion: "0.1.0",
+        }),
+        fullMod({
             id: BSUTILS_ID,
             name: "BS Utils",
             summary: "[Experimental 1.45.1 port] A basic library for beat saber mods to use.",
@@ -133,7 +153,7 @@ export function getExperimental1451Mods(): BbmFullMod[] {
             gitUrl: "https://github.com/TheMysticle/Beat-Saber-Utils",
             downloadUrl: "https://github.com/TheMysticle/Beat-Saber-Utils/releases/download/v1.14.4-bs1.45.1/BS_Utils-1.14.4-bs1.45.1-077404b.zip",
             modVersion: "1.14.4",
-            dependencies: [BSIPA_ID],
+            dependencies: [BSIPA_ID, INIPARSER_ID],
         }),
         fullMod({
             id: BEATSAVERSHARP_ID,
@@ -152,7 +172,7 @@ export function getExperimental1451Mods(): BbmFullMod[] {
             gitUrl: "https://github.com/TheMysticle/BeatSaverDownloader",
             downloadUrl: "https://github.com/TheMysticle/BeatSaverDownloader/releases/download/v6.0.7-bs1.45.1/BeatSaverDownloader-6.0.7-bs1.45.1-03f6fb3.zip",
             modVersion: "6.0.7",
-            dependencies: [BSIPA_ID, BSUTILS_ID, BSML_ID, SONGCORE_ID, BEATSAVERSHARP_ID],
+            dependencies: [BSIPA_ID, BSUTILS_ID, BSML_ID, SONGCORE_ID, BEATSAVERSHARP_ID, SCORESABERSHARP_ID],
         }),
         fullMod({
             id: BEATSAVERUPDATER_ID,
