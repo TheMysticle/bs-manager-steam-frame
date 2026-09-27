@@ -34,8 +34,14 @@ hand-maintained re-implementation of its output, and it's already in review
 against upstream. Full credit to both for the ARM64 groundwork.
 
 This fork carries no BSManager code that isn't already public, upstream, and
-CI-passing on `Zagrios/bs-manager` — it exists to make it installable *today*,
-while PRs #1122–#1124 go through review.
+CI-passing on `Zagrios/bs-manager` — it's a stopgap, existing purely to make
+BSManager installable on the Frame *today* while PRs #1122–#1124 go through
+review. Once they land upstream, this whole repo stops being necessary and
+you should just use upstream BSManager directly.
+
+In the meantime, to save people the build step entirely, I'm planning to
+publish prebuilt aarch64 binaries under Releases along with a small script to
+set up the Steam shortcut.
 
 ## Building / installing
 
