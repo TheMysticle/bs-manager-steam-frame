@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=BSManager
+Comment=An all-in-one tool for managing Beat Saber versions, maps, mods, and more
+Exec=bs-manager %U
+Terminal=false
+Type=Application
+Icon=bs-manager
+StartupWMClass=BSManager
+MimeType=x-scheme-handler/bsmanager;x-scheme-handler/beatsaver;x-scheme-handler/bsplaylist;x-scheme-handler/modelsaber;x-scheme-handler/web+bsmap
+Categories=Game;Utility;
