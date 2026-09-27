@@ -24,9 +24,9 @@ with original authorship preserved, from work already submitted upstream:
 
 **Credit:** the initial proof that this was possible at all came from
 [thebillington](https://github.com/thebillington/bs-manager)'s fork and
-[AUR packaging](https://github.com/thebillington/bs-manager-aur), written up in
-a [community tutorial](https://github.com/thebillington/bs-manager-aur) for
-running BSManager on the Frame. That fork used a different technique for the
+[AUR packaging](https://github.com/thebillington/bs-manager-aur), written up
+in [a Reddit tutorial](https://www.reddit.com/r/SteamFrame/comments/1wq1b9x/bsmanager_rebuilt_for_steam_frame_volunteers_for/)
+for running BSManager on the Frame. That fork used a different technique for the
 BSIPA problem (manually replicating `IPA.exe`'s file-drop install instead of
 running it under Proton); this repo uses jackwilsdon's upstream-submitted
 Proton-based approach instead, since it runs the real injector rather than a
