@@ -1,13 +1,15 @@
 import { BbmCategories, BbmFullMod, BbmPlatform, BbmStatus } from "../../../shared/models/mods/mod.interface";
+import { RequestService } from "../request.service";
+import log from "electron-log";
 
 /**
  * Experimental, hand-maintained mod list for Beat Saber 1.45.1 (Unity 6000.3.19f1).
  *
  * BeatMods has no entries for 1.45.1 at all (confirmed via the BSMG Discord: nobody has
  * published anything for this version yet). These are public ports, verified to build
- * cleanly against 1.45.1's actual assemblies and confirmed working in-headset (BSIPA +
- * SiraUtil + BSML + SongCore) on real hardware -- see each fork's README/commit history
- * for exactly what changed and why:
+ * cleanly against 1.45.1's actual assemblies and confirmed working in-headset (full stack,
+ * including a fixed rendering bug in SongCore's loading indicator) on real hardware -- see
+ * each fork's README/commit history for exactly what changed and why:
  *   - https://github.com/TheMysticle/SiraUtil
  *   - https://github.com/TheMysticle/BeatSaberMarkupLanguage
  *   - https://github.com/TheMysticle/SongCore
@@ -16,13 +18,22 @@ import { BbmCategories, BbmFullMod, BbmPlatform, BbmStatus } from "../../../shar
  *   - https://github.com/TheMysticle/BeatSaverDownloader
  *   - https://github.com/TheMysticle/BeatSaverUpdater
  *   - https://github.com/TheMysticle/WhyIsThereNoLeaderboard
+ *   - https://github.com/TheMysticle/beatsaber-experimental-libs
  *
- * BSIPA itself needed zero changes (it doesn't reference any game assemblies), so this
- * points at the official, unmodified 4.3.7 release straight from BeatMods' own CDN.
+ * Every GitHub-hosted entry below resolves its download URL and version from that repo's
+ * *latest* GitHub release at request time (via the GitHub REST API), instead of a hardcoded
+ * tag/filename -- push a new release to any of these repos and bs-manager picks it up on its
+ * next mod-list fetch, no code change here needed. If the GitHub API call fails (offline, rate
+ * limited, repo renamed, etc.) each entry falls back to the last-known-good hardcoded
+ * URL/version baked in below, so a transient API problem never breaks the mod list entirely.
  *
- * `zipHash` is (ab)used to carry a full download URL instead of a real BeatMods content
- * hash for these four entries; getModDownload() in bs-mods-manager.service.ts checks for
- * that and uses it directly instead of building a `/cdn/mod/<hash>.zip` BeatMods URL.
+ * BSIPA and ScoreSaberSharp aren't ours to version this way -- they point at the official,
+ * unmodified BeatMods CDN directly (BSIPA needed zero changes for 1.45.1; ScoreSaberSharp is
+ * closed-source and version-agnostic, confirmed byte-identical to BeatMods' own copy).
+ *
+ * `zipHash` is (ab)used to carry a full download URL instead of a real BeatMods content hash;
+ * getModDownload() in bs-mods-manager.service.ts checks for that and uses it directly instead
+ * of building a `/cdn/mod/<hash>.zip` BeatMods URL.
  *
  * `dependencies` reference the `version.id` values below so bs-manager's existing
  * dependency-resolution logic pulls the right set together automatically.
@@ -42,6 +53,26 @@ const INIPARSER_ID = 145110;
 const SCORESABERSHARP_ID = 145111;
 
 const placeholderAuthor = { id: 0, username: "TheMysticle", githubId: "TheMysticle", sponsorUrl: "", displayName: "TheMysticle", bio: "" };
+
+interface GithubReleaseAsset {
+    name: string;
+    browser_download_url: string;
+}
+
+interface GithubRelease {
+    tag_name: string;
+    assets: GithubReleaseAsset[];
+}
+
+/** Resolves the download URL + version of a GitHub repo's latest release (its newest .zip asset). */
+async function getLatestGithubRelease(owner: string, repo: string): Promise<{ version: string; downloadUrl: string }> {
+    const { data } = await RequestService.getInstance().getJSON<GithubRelease>(`https://api.github.com/repos/${owner}/${repo}/releases/latest`);
+    const asset = data.assets?.find(a => a.name.endsWith(".zip"));
+    if (!asset) {
+        throw new Error(`No .zip asset in latest release of ${owner}/${repo}`);
+    }
+    return { version: data.tag_name.replace(/^v/, ""), downloadUrl: asset.browser_download_url };
+}
 
 function fullMod(params: {
     id: number;
@@ -86,7 +117,156 @@ function fullMod(params: {
     };
 }
 
-export function getExperimental1451Mods(): BbmFullMod[] {
+/**
+ * Same as fullMod(), but resolves downloadUrl/modVersion from `owner/repo`'s latest GitHub
+ * release instead of taking them as fixed params. Falls back to `fallbackVersion`/
+ * `fallbackDownloadUrl` (the last-known-good values) if that lookup fails for any reason.
+ */
+async function fullModFromLatestRelease(params: {
+    id: number;
+    name: string;
+    summary: string;
+    category: BbmCategories;
+    gitUrl: string;
+    owner: string;
+    repo: string;
+    fallbackVersion: string;
+    fallbackDownloadUrl: string;
+    dependencies?: number[];
+}): Promise<BbmFullMod> {
+    let modVersion = params.fallbackVersion;
+    let downloadUrl = params.fallbackDownloadUrl;
+
+    try {
+        const latest = await getLatestGithubRelease(params.owner, params.repo);
+        modVersion = latest.version;
+        downloadUrl = latest.downloadUrl;
+    } catch (error) {
+        log.warn(`[experimental-1451-mods] Could not resolve latest release for ${params.owner}/${params.repo}, using fallback ${params.fallbackVersion}`, error);
+    }
+
+    return fullMod({
+        id: params.id,
+        name: params.name,
+        summary: params.summary,
+        category: params.category,
+        gitUrl: params.gitUrl,
+        downloadUrl,
+        modVersion,
+        dependencies: params.dependencies,
+    });
+}
+
+export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
+    const [siraUtil, bsml, songCore, iniParser, bsUtils, beatSaverSharp, beatSaverDownloader, beatSaverUpdater, whyIsThereNoLeaderboard] = await Promise.all([
+        fullModFromLatestRelease({
+            id: SIRAUTIL_ID,
+            name: "SiraUtil",
+            summary: "[Experimental 1.45.1 port] A powerful utility mod which provides more tools to Beat Saber modders.",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/TheMysticle/SiraUtil",
+            owner: "TheMysticle",
+            repo: "SiraUtil",
+            fallbackVersion: "3.4.0-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/SiraUtil/releases/download/v3.4.0-bs1.45.1/SiraUtil-3.4.0-bs1.45.1.zip",
+            dependencies: [BSIPA_ID],
+        }),
+        fullModFromLatestRelease({
+            id: BSML_ID,
+            name: "BeatSaberMarkupLanguage",
+            summary: "[Experimental 1.45.1 port] An XML-based UI system.",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/TheMysticle/BeatSaberMarkupLanguage",
+            owner: "TheMysticle",
+            repo: "BeatSaberMarkupLanguage",
+            fallbackVersion: "1.14.2-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/BeatSaberMarkupLanguage/releases/download/v1.14.2-bs1.45.1/BSML-1.14.2-bs1.45.1.zip",
+            dependencies: [BSIPA_ID],
+        }),
+        fullModFromLatestRelease({
+            id: SONGCORE_ID,
+            name: "SongCore",
+            summary: "[Experimental 1.45.1 port] A plugin for handling custom song additions in Beat Saber.",
+            category: BbmCategories.Core,
+            gitUrl: "https://github.com/TheMysticle/SongCore",
+            owner: "TheMysticle",
+            repo: "SongCore",
+            fallbackVersion: "3.15.3-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/SongCore/releases/download/v3.15.3-bs1.45.1/SongCore-3.15.3-bs1.45.1.zip",
+            dependencies: [BSIPA_ID, SIRAUTIL_ID, BSML_ID],
+        }),
+        fullModFromLatestRelease({
+            id: INIPARSER_ID,
+            name: "Ini Parser",
+            summary: "[Experimental 1.45.1 port] .NET library for reading/writing INI data. Redistributed at the exact assembly identity (INIFileParser, Version=2.5.2.0) BS_Utils's IniFile utility references -- BeatMods' current listing ships a newer, renamed build (assembly INIParser 2.5.9.0) that does NOT satisfy that reference and causes a TypeLoadException at plugin startup.",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/rickyah/ini-parser",
+            owner: "TheMysticle",
+            repo: "beatsaber-experimental-libs",
+            fallbackVersion: "2.5.2.0",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/beatsaber-experimental-libs/releases/download/v2.5.2.0/INIFileParser-2.5.2.0.zip",
+        }),
+        fullModFromLatestRelease({
+            id: BSUTILS_ID,
+            name: "BS Utils",
+            summary: "[Experimental 1.45.1 port] A basic library for beat saber mods to use.",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/TheMysticle/Beat-Saber-Utils",
+            owner: "TheMysticle",
+            repo: "Beat-Saber-Utils",
+            fallbackVersion: "1.14.4-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/Beat-Saber-Utils/releases/download/v1.14.4-bs1.45.1/BS_Utils-1.14.4-bs1.45.1-077404b.zip",
+            dependencies: [BSIPA_ID, INIPARSER_ID],
+        }),
+        fullModFromLatestRelease({
+            id: BEATSAVERSHARP_ID,
+            name: "BeatSaverSharp",
+            summary: "[Experimental 1.45.1 port] A .NET library for interacting with the BeatSaver API. Unmodified upstream (Auros/BeatSaverSharper, Unity build) -- doesn't reference any game assemblies directly.",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/TheMysticle/BeatSaverSharper",
+            owner: "TheMysticle",
+            repo: "BeatSaverSharper",
+            fallbackVersion: "3.4.5-unity",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/BeatSaverSharper/releases/download/v3.4.5-unity/BeatSaverSharp-3.4.5-Unity.zip",
+        }),
+        fullModFromLatestRelease({
+            id: BEATSAVERDOWNLOADER_ID,
+            name: "BeatSaverDownloader",
+            summary: "[Experimental 1.45.1 port] Enables you to download songs from BeatSaver in-game.",
+            category: BbmCategories.Core,
+            gitUrl: "https://github.com/TheMysticle/BeatSaverDownloader",
+            owner: "TheMysticle",
+            repo: "BeatSaverDownloader",
+            fallbackVersion: "6.0.7-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/BeatSaverDownloader/releases/download/v6.0.7-bs1.45.1/BeatSaverDownloader-6.0.7-bs1.45.1-03f6fb3.zip",
+            dependencies: [BSIPA_ID, BSUTILS_ID, BSML_ID, SONGCORE_ID, BEATSAVERSHARP_ID, SCORESABERSHARP_ID],
+        }),
+        fullModFromLatestRelease({
+            id: BEATSAVERUPDATER_ID,
+            name: "BeatSaverUpdater",
+            summary: "[Experimental 1.45.1 port] Alerts you of updates to maps and updates them to the latest version.",
+            category: BbmCategories.Core,
+            gitUrl: "https://github.com/TheMysticle/BeatSaverUpdater",
+            owner: "TheMysticle",
+            repo: "BeatSaverUpdater",
+            fallbackVersion: "1.2.14-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/BeatSaverUpdater/releases/download/v1.2.14-bs1.45.1/BeatSaverUpdater-1.2.14-bs1.45.1-a9b14c1.zip",
+            dependencies: [BSIPA_ID, BSML_ID, SONGCORE_ID, SIRAUTIL_ID, BEATSAVERSHARP_ID],
+        }),
+        fullModFromLatestRelease({
+            id: WHYISTHERENOLEADERBOARD_ID,
+            name: "WhyIsThereNoLeaderboard",
+            summary: "[Experimental 1.45.1 port] Clarifies why leaderboards on custom songs are not supported and lets you download one.",
+            category: BbmCategories.Essential,
+            gitUrl: "https://github.com/TheMysticle/WhyIsThereNoLeaderboard",
+            owner: "TheMysticle",
+            repo: "WhyIsThereNoLeaderboard",
+            fallbackVersion: "1.0.3-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/WhyIsThereNoLeaderboard/releases/download/v1.0.3-bs1.45.1/WhyIsThereNoLeaderboard-1.0.3-bs1.45.1-ce72195.zip",
+            dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID],
+        }),
+    ]);
+
     return [
         fullMod({
             id: BSIPA_ID,
@@ -97,45 +277,10 @@ export function getExperimental1451Mods(): BbmFullMod[] {
             downloadUrl: "https://beatmods.com/cdn/mod/947774ef1010ff809ae05e345e269a90.zip",
             modVersion: "4.3.7",
         }),
-        fullMod({
-            id: SIRAUTIL_ID,
-            name: "SiraUtil",
-            summary: "[Experimental 1.45.1 port] A powerful utility mod which provides more tools to Beat Saber modders.",
-            category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/SiraUtil",
-            downloadUrl: "https://github.com/TheMysticle/SiraUtil/releases/download/v3.4.0-bs1.45.1/SiraUtil-3.4.0-bs1.45.1.zip",
-            modVersion: "3.4.0",
-            dependencies: [BSIPA_ID],
-        }),
-        fullMod({
-            id: BSML_ID,
-            name: "BeatSaberMarkupLanguage",
-            summary: "[Experimental 1.45.1 port] An XML-based UI system.",
-            category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/BeatSaberMarkupLanguage",
-            downloadUrl: "https://github.com/TheMysticle/BeatSaberMarkupLanguage/releases/download/v1.14.2-bs1.45.1/BSML-1.14.2-bs1.45.1.zip",
-            modVersion: "1.14.2",
-            dependencies: [BSIPA_ID],
-        }),
-        fullMod({
-            id: SONGCORE_ID,
-            name: "SongCore",
-            summary: "[Experimental 1.45.1 port] A plugin for handling custom song additions in Beat Saber.",
-            category: BbmCategories.Core,
-            gitUrl: "https://github.com/TheMysticle/SongCore",
-            downloadUrl: "https://github.com/TheMysticle/SongCore/releases/download/v3.15.3-bs1.45.1/SongCore-3.15.3-bs1.45.1.zip",
-            modVersion: "3.15.3",
-            dependencies: [BSIPA_ID, SIRAUTIL_ID, BSML_ID],
-        }),
-        fullMod({
-            id: INIPARSER_ID,
-            name: "Ini Parser",
-            summary: "[Experimental 1.45.1 port] .NET library for reading/writing INI data. Redistributed at the exact assembly identity (INIFileParser, Version=2.5.2.0) BS_Utils's IniFile utility references -- BeatMods' current listing ships a newer, renamed build (assembly INIParser 2.5.9.0) that does NOT satisfy that reference and causes a TypeLoadException at plugin startup.",
-            category: BbmCategories.Library,
-            gitUrl: "https://github.com/rickyah/ini-parser",
-            downloadUrl: "https://github.com/TheMysticle/beatsaber-experimental-libs/releases/download/v2.5.2.0/INIFileParser-2.5.2.0.zip",
-            modVersion: "2.5.2",
-        }),
+        siraUtil,
+        bsml,
+        songCore,
+        iniParser,
         fullMod({
             id: SCORESABERSHARP_ID,
             name: "ScoreSaberSharp",
@@ -145,54 +290,10 @@ export function getExperimental1451Mods(): BbmFullMod[] {
             downloadUrl: "https://beatmods.com/cdn/mod/8713168c598577ee7c73fa3cf0e26f5c.zip",
             modVersion: "0.1.0",
         }),
-        fullMod({
-            id: BSUTILS_ID,
-            name: "BS Utils",
-            summary: "[Experimental 1.45.1 port] A basic library for beat saber mods to use.",
-            category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/Beat-Saber-Utils",
-            downloadUrl: "https://github.com/TheMysticle/Beat-Saber-Utils/releases/download/v1.14.4-bs1.45.1/BS_Utils-1.14.4-bs1.45.1-077404b.zip",
-            modVersion: "1.14.4",
-            dependencies: [BSIPA_ID, INIPARSER_ID],
-        }),
-        fullMod({
-            id: BEATSAVERSHARP_ID,
-            name: "BeatSaverSharp",
-            summary: "[Experimental 1.45.1 port] A .NET library for interacting with the BeatSaver API. Unmodified upstream (Auros/BeatSaverSharper 3.4.5, Unity build) -- doesn't reference any game assemblies directly.",
-            category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/BeatSaverSharper",
-            downloadUrl: "https://github.com/TheMysticle/BeatSaverSharper/releases/download/v3.4.5-unity/BeatSaverSharp-3.4.5-Unity.zip",
-            modVersion: "3.4.5",
-        }),
-        fullMod({
-            id: BEATSAVERDOWNLOADER_ID,
-            name: "BeatSaverDownloader",
-            summary: "[Experimental 1.45.1 port] Enables you to download songs from BeatSaver in-game.",
-            category: BbmCategories.Core,
-            gitUrl: "https://github.com/TheMysticle/BeatSaverDownloader",
-            downloadUrl: "https://github.com/TheMysticle/BeatSaverDownloader/releases/download/v6.0.7-bs1.45.1/BeatSaverDownloader-6.0.7-bs1.45.1-03f6fb3.zip",
-            modVersion: "6.0.7",
-            dependencies: [BSIPA_ID, BSUTILS_ID, BSML_ID, SONGCORE_ID, BEATSAVERSHARP_ID, SCORESABERSHARP_ID],
-        }),
-        fullMod({
-            id: BEATSAVERUPDATER_ID,
-            name: "BeatSaverUpdater",
-            summary: "[Experimental 1.45.1 port] Alerts you of updates to maps and updates them to the latest version.",
-            category: BbmCategories.Core,
-            gitUrl: "https://github.com/TheMysticle/BeatSaverUpdater",
-            downloadUrl: "https://github.com/TheMysticle/BeatSaverUpdater/releases/download/v1.2.14-bs1.45.1/BeatSaverUpdater-1.2.14-bs1.45.1-a9b14c1.zip",
-            modVersion: "1.2.14",
-            dependencies: [BSIPA_ID, BSML_ID, SONGCORE_ID, SIRAUTIL_ID, BEATSAVERSHARP_ID],
-        }),
-        fullMod({
-            id: WHYISTHERENOLEADERBOARD_ID,
-            name: "WhyIsThereNoLeaderboard",
-            summary: "[Experimental 1.45.1 port] Clarifies why leaderboards on custom songs are not supported and lets you download one.",
-            category: BbmCategories.Essential,
-            gitUrl: "https://github.com/TheMysticle/WhyIsThereNoLeaderboard",
-            downloadUrl: "https://github.com/TheMysticle/WhyIsThereNoLeaderboard/releases/download/v1.0.3-bs1.45.1/WhyIsThereNoLeaderboard-1.0.3-bs1.45.1-ce72195.zip",
-            modVersion: "1.0.3",
-            dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID],
-        }),
+        bsUtils,
+        beatSaverSharp,
+        beatSaverDownloader,
+        beatSaverUpdater,
+        whyIsThereNoLeaderboard,
     ];
 }

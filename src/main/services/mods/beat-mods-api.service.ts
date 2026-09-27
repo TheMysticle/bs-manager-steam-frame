@@ -67,7 +67,7 @@ export class BeatModsApiService {
         }
 
         if (EXPERIMENTAL_VERSIONS.includes(version.BSVersion)) {
-            const fullMods = getExperimental1451Mods();
+            const fullMods = await getExperimental1451Mods();
             this.versionModsCache.set(version.BSVersion, fullMods);
             this.updateModsHashCache(fullMods.map(mod => mod.version));
             return fullMods;
