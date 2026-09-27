@@ -231,7 +231,14 @@ mv "${OPT_DIR}.new" "$OPT_DIR"
 
 log "Installing launcher, desktop entry and icons"
 install -Dm755 "${REPO_ROOT}/packaging/bs-manager-launcher.sh" "${BIN_DIR}/bs-manager"
-install -Dm644 "${REPO_ROOT}/packaging/bs-manager.desktop" "${LOCAL_ROOT}/share/applications/bs-manager.desktop"
+# Desktop launchers (e.g. Steam's Big Picture / gamescope session) often run
+# with a minimal PATH that doesn't include ~/.local/bin, so a bare
+# "Exec=bs-manager" can fail with "cannot find program bs-manager" even
+# though it works fine from an interactive shell. Bake in the absolute path.
+mkdir -p "${LOCAL_ROOT}/share/applications"
+sed "s#^Exec=bs-manager #Exec=${BIN_DIR}/bs-manager #" \
+    "${REPO_ROOT}/packaging/bs-manager.desktop" > "${LOCAL_ROOT}/share/applications/bs-manager.desktop"
+chmod 644 "${LOCAL_ROOT}/share/applications/bs-manager.desktop"
 install -Dm644 "${REPO_ROOT}/resources/readme/SVG/icon.svg" "${LOCAL_ROOT}/share/icons/hicolor/scalable/apps/bs-manager.svg"
 for size in 16 24 32 128 256; do
     install -Dm644 "${REPO_ROOT}/build/icons/png/${size}x${size}.png" \
