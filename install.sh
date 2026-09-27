@@ -84,6 +84,17 @@ if [ -f "$BUILD_MARKER" ]; then
     clean_build_artifacts
 fi
 
+# release/app/{package.json,pnpm-lock.yaml,pnpm-workspace.yaml} are tracked
+# source files, not build output. An older version of this script's cleanup
+# deleted them along with the real byproducts; self-heal that here so a
+# checkout left in that state doesn't require a manual `git checkout` first.
+if [ ! -f "${REPO_ROOT}/release/app/package.json" ]; then
+    git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+        || die "release/app/package.json is missing and ${REPO_ROOT} isn't a git checkout -- can't self-heal, re-clone the repo"
+    log "release/app is missing (likely wiped by an older or interrupted run) -- restoring it from git"
+    git -C "$REPO_ROOT" checkout -- release/app
+fi
+
 # ---------------------------------------------------------------------------
 # Volta + pinned Node
 # ---------------------------------------------------------------------------
