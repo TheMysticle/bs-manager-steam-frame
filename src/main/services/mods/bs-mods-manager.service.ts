@@ -259,6 +259,12 @@ export class BsModsManagerService {
     }
 
     private getModDownload(modVersion: BbmModVersion): string {
+        // Experimental 1.45.1 mods (see experimental-1451-mods.ts) put a full download URL
+        // in zipHash instead of a real BeatMods content hash, since they're not hosted on
+        // BeatMods at all.
+        if (modVersion.zipHash?.startsWith("http")) {
+            return modVersion.zipHash;
+        }
         return `/cdn/mod/${modVersion.zipHash}.zip`
     }
 
