@@ -22,12 +22,24 @@ LOCAL_ROOT="${HOME}/.local"
 BIN_DIR="${LOCAL_ROOT}/bin"
 MUSL_DIR="${LOCAL_ROOT}/musl"
 OPT_DIR="${LOCAL_ROOT}/opt/${APP_NAME}"
+STATE_DIR="${LOCAL_ROOT}/share/bs-manager-steam-frame"
+STATE_FILE="${STATE_DIR}/install-state.env"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$1"; }
 die()  { printf '\033[1;31mERROR:\033[0m %s\n' "$1" >&2; exit 1; }
 trap 'st=$?; [ $st -ne 0 ] && printf "\033[1;31mFAILED\033[0m (exit %s) at line %s: %s\n" "$st" "$LINENO" "$BASH_COMMAND" >&2' ERR
+
+# Tracks which toolchains this script installed itself (as opposed to ones
+# that were already on the system), so uninstall.sh only removes what it
+# added. Flags only ever go 0 -> 1 across reruns, never back down, so a
+# toolchain installed on an earlier run is still remembered as "ours" later.
+FRESH_VOLTA=0
+FRESH_RUSTUP=0
+FRESH_RUST_TARGET=0
+# shellcheck disable=SC1090
+[ -f "$STATE_FILE" ] && source "$STATE_FILE"
 
 [ "$(uname -s)" = "Linux" ] || die "this script only targets Linux (Steam Frame / SteamOS)"
 [ "$(uname -m)" = "aarch64" ] || die "this script only targets aarch64; detected $(uname -m). For x86_64 use the upstream AUR package instead."
@@ -42,6 +54,7 @@ if ! command -v volta >/dev/null 2>&1; then
     log "Installing Volta"
     curl -fsSL https://get.volta.sh | bash -s -- --skip-setup
     export PATH="${HOME}/.volta/bin:$PATH"
+    FRESH_VOLTA=1
 fi
 command -v volta >/dev/null 2>&1 || die "volta install did not put 'volta' on PATH"
 
@@ -71,12 +84,16 @@ command -v pnpm >/dev/null 2>&1 || die "pnpm shim not found on PATH after 'corep
 if ! command -v rustup >/dev/null 2>&1; then
     log "Installing rustup"
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    FRESH_RUSTUP=1
 fi
 # shellcheck disable=SC1090
 [ -f "${HOME}/.cargo/env" ] && source "${HOME}/.cargo/env"
 command -v rustup >/dev/null 2>&1 || die "rustup install did not put 'rustup' on PATH"
 
 log "Ensuring rust target ${RUST_TARGET}"
+if ! rustup target list --installed | grep -qx "$RUST_TARGET"; then
+    FRESH_RUST_TARGET=1
+fi
 rustup target add "$RUST_TARGET"
 
 # ---------------------------------------------------------------------------
@@ -166,5 +183,22 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache "${LOCAL_ROOT}/share/icons/hicolor" || true
 fi
 
+# ---------------------------------------------------------------------------
+# Record what we installed, then clean up build byproducts
+# ---------------------------------------------------------------------------
+log "Recording install state for uninstall.sh"
+mkdir -p "$STATE_DIR"
+cat > "$STATE_FILE" <<EOF
+FRESH_VOLTA=${FRESH_VOLTA}
+FRESH_RUSTUP=${FRESH_RUSTUP}
+FRESH_RUST_TARGET=${FRESH_RUST_TARGET}
+EOF
+
+log "Cleaning up build byproducts (already copied into ${OPT_DIR})"
+rm -rf "${REPO_ROOT}/node_modules" "${REPO_ROOT}/dist" "${REPO_ROOT}/release"
+find "${REPO_ROOT}/externals" -maxdepth 2 -type d -name target -exec rm -rf {} +
+
 log "Done. Launch from your desktop's app list ('BSManager'), or run: ${BIN_DIR}/bs-manager"
 log "See README.md for the Steam launch-options fix needed for mods to load when Beat Saber is launched directly from Steam."
+log "Re-running this script later (e.g. after 'git pull') will rebuild from scratch, since the build byproducts above were just removed."
+log "To remove everything this script installed, run ./uninstall.sh"

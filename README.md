@@ -66,10 +66,29 @@ cd bs-manager-steam-frame
 - Is idempotent: safe to re-run after a `git pull` to rebuild, and fails
   loudly (with the failing command and line number) instead of continuing
   past a broken step.
+- Cleans up after itself once the app is installed: `node_modules`, `dist/`,
+  `release/`, and the Rust `target/` build directories are all removed from
+  the checkout (they're multi-GB and no longer needed once the built app is
+  copied into `~/.local`). Re-running `install.sh` later just rebuilds them.
 
 A `packaging/PKGBUILD` is also included, kept in sync with the same source
 tree, for anyone who'd rather build it the normal Arch/AUR way (e.g. once this
 repo is public) instead of running `install.sh`.
+
+### Uninstalling
+
+```sh
+./uninstall.sh
+```
+
+Removes the app, launcher, desktop entry, and icons, plus the musl
+cross-toolchain and Corepack shims `install.sh` created — these are always
+fully owned by this repo, so they're always removed. Volta and rustup are
+only removed if `install.sh` installed them fresh in the first place (tracked
+in `~/.local/share/bs-manager-steam-frame/install-state.env`); if either
+already existed on your system before you ran `install.sh`, `uninstall.sh`
+leaves it alone rather than guessing. Pass `-y`/`--yes` to skip the
+confirmation prompt.
 
 ## Known caveat: mods only load when launched via BSManager, not via Steam directly
 
