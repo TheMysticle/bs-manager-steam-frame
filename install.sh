@@ -24,12 +24,39 @@ MUSL_DIR="${LOCAL_ROOT}/musl"
 OPT_DIR="${LOCAL_ROOT}/opt/${APP_NAME}"
 STATE_DIR="${LOCAL_ROOT}/share/bs-manager-steam-frame"
 STATE_FILE="${STATE_DIR}/install-state.env"
+BUILD_MARKER="${STATE_DIR}/build-in-progress"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$1"; }
 die()  { printf '\033[1;31mERROR:\033[0m %s\n' "$1" >&2; exit 1; }
-trap 'st=$?; [ $st -ne 0 ] && printf "\033[1;31mFAILED\033[0m (exit %s) at line %s: %s\n" "$st" "$LINENO" "$BASH_COMMAND" >&2' ERR
+
+# Build byproducts (node_modules, dist, release, an in-flight OPT_DIR swap)
+# have no integrity check of their own, unlike the toolchains below (musl is
+# sha256-verified, rust targets are checked via rustup, volta via command -v)
+# -- so a run that died partway through can leave them silently corrupt in a
+# way a plain rerun won't notice. Safe to always nuke and regenerate.
+clean_build_artifacts() {
+    rm -rf "${REPO_ROOT}/node_modules" "${REPO_ROOT}/dist" "${REPO_ROOT}/release" "${OPT_DIR}.new"
+    find "${REPO_ROOT}/externals" -maxdepth 2 -type d -name target -exec rm -rf {} + 2>/dev/null || true
+    rm -f "$BUILD_MARKER"
+}
+
+on_error() {
+    local st=$?
+    printf '\033[1;31mFAILED\033[0m (exit %s) at line %s: %s\n' "$st" "$LINENO" "$BASH_COMMAND" >&2
+    if [ -f "$BUILD_MARKER" ]; then
+        log "Cleaning up partial build state so the next run starts fresh"
+        clean_build_artifacts
+    fi
+}
+on_interrupt() {
+    printf '\033[1;31mInterrupted\033[0m -- cleaning up partial build state\n' >&2
+    [ -f "$BUILD_MARKER" ] && clean_build_artifacts
+    exit 130
+}
+trap on_error ERR
+trap on_interrupt INT TERM
 
 # Tracks which toolchains this script installed itself (as opposed to ones
 # that were already on the system), so uninstall.sh only removes what it
@@ -44,8 +71,13 @@ FRESH_RUST_TARGET=0
 [ "$(uname -s)" = "Linux" ] || die "this script only targets Linux (Steam Frame / SteamOS)"
 [ "$(uname -m)" = "aarch64" ] || die "this script only targets aarch64; detected $(uname -m). For x86_64 use the upstream AUR package instead."
 
-mkdir -p "$BIN_DIR" "$MUSL_DIR"
+mkdir -p "$BIN_DIR" "$MUSL_DIR" "$STATE_DIR"
 export PATH="$BIN_DIR:${HOME}/.volta/bin:$PATH"
+
+if [ -f "$BUILD_MARKER" ]; then
+    log "Previous run left an incomplete build (it crashed or was interrupted) -- cleaning up before starting again"
+    clean_build_artifacts
+fi
 
 # ---------------------------------------------------------------------------
 # Volta + pinned Node
@@ -65,6 +97,15 @@ NODE_IMG_DIR="$(find "${HOME}/.volta/tools/image/node" -maxdepth 1 -type d -name
 [ -n "$NODE_IMG_DIR" ] || die "could not find volta's node@${NODE_VERSION} image directory"
 VOLTA_COREPACK="${NODE_IMG_DIR}/bin/corepack"
 [ -x "$VOLTA_COREPACK" ] || die "corepack binary not found at $VOLTA_COREPACK (unexpected Node layout)"
+
+# Put the real node binary directory on PATH directly, ahead of volta's
+# shim, so the frozen-lockfile install/build below doesn't depend on
+# volta-shim's runtime version resolution succeeding -- one less moving
+# part for a step we can't easily retry by hand.
+export PATH="${NODE_IMG_DIR}/bin:$PATH"
+hash -r
+command -v node >/dev/null 2>&1 || die "node still not on PATH after installing via volta (looked in ${NODE_IMG_DIR}/bin)"
+log "Using node $(node --version) from ${NODE_IMG_DIR}"
 
 # ---------------------------------------------------------------------------
 # pnpm via Corepack, pinned to the version this repo's package.json requires
@@ -139,6 +180,7 @@ chmod +x "$MUSL_WRAPPER"
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
+touch "$BUILD_MARKER"
 log "Installing JS dependencies (pnpm install --frozen-lockfile)"
 cd "$REPO_ROOT"
 pnpm install --frozen-lockfile
@@ -163,9 +205,11 @@ UNPACKED_DIR="${REPO_ROOT}/release/build/linux-arm64-unpacked"
 # Install into $HOME/.local
 # ---------------------------------------------------------------------------
 log "Installing to ${OPT_DIR}"
+rm -rf "${OPT_DIR}.new"
+mkdir -p "${OPT_DIR}.new"
+cp -r "${UNPACKED_DIR}/." "${OPT_DIR}.new/"
 rm -rf "$OPT_DIR"
-mkdir -p "$OPT_DIR"
-cp -r "${UNPACKED_DIR}/." "$OPT_DIR/"
+mv "${OPT_DIR}.new" "$OPT_DIR"
 
 log "Installing launcher, desktop entry and icons"
 install -Dm755 "${REPO_ROOT}/packaging/bs-manager-launcher.sh" "${BIN_DIR}/bs-manager"
@@ -195,8 +239,7 @@ FRESH_RUST_TARGET=${FRESH_RUST_TARGET}
 EOF
 
 log "Cleaning up build byproducts (already copied into ${OPT_DIR})"
-rm -rf "${REPO_ROOT}/node_modules" "${REPO_ROOT}/dist" "${REPO_ROOT}/release"
-find "${REPO_ROOT}/externals" -maxdepth 2 -type d -name target -exec rm -rf {} +
+clean_build_artifacts
 
 log "Done. Launch from your desktop's app list ('BSManager'), or run: ${BIN_DIR}/bs-manager"
 log "See README.md for the Steam launch-options fix needed for mods to load when Beat Saber is launched directly from Steam."
