@@ -37,7 +37,12 @@ die()  { printf '\033[1;31mERROR:\033[0m %s\n' "$1" >&2; exit 1; }
 # -- so a run that died partway through can leave them silently corrupt in a
 # way a plain rerun won't notice. Safe to always nuke and regenerate.
 clean_build_artifacts() {
-    rm -rf "${REPO_ROOT}/node_modules" "${REPO_ROOT}/dist" "${REPO_ROOT}/release" "${OPT_DIR}.new"
+    # release/app/{package.json,pnpm-lock.yaml,pnpm-workspace.yaml} are
+    # tracked source files (electron-react-boilerplate's two-package.json
+    # layout), not build output -- only release/build is electron-builder's
+    # generated output dir (see directories.output in electron-builder.config.js),
+    # so that's all that's safe to nuke here.
+    rm -rf "${REPO_ROOT}/node_modules" "${REPO_ROOT}/dist" "${REPO_ROOT}/release/build" "${OPT_DIR}.new"
     find "${REPO_ROOT}/externals" -maxdepth 2 -type d -name target -exec rm -rf {} + 2>/dev/null || true
     rm -f "$BUILD_MARKER"
 }
