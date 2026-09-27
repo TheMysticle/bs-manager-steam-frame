@@ -11,16 +11,14 @@ import { pathExists, pathExistsSync, readdir, writeFile } from "fs-extra";
 import { SteamShortcut, SteamShortcutData } from "../../shared/models/steam/shortcut.model";
 
 const { list } = (execOnOs({ win32: () => require("regedit-rs") }, true) ?? {}) as typeof import("regedit-rs");
-// Linux process detection searches full "ps" command lines - include a
-// trailing space to avoid matching "steamrtarm64/steamwebhelper".
-const LINUX_STEAM_PROCESS_NAME = process.arch === "arm64"
-    ? "steamrtarm64/steam\x20"
-    : "steam-runtime-launcher-service";
 
 export class SteamService {
-    private static readonly PROCESS_NAME: string = process.platform === "linux"
-        ? LINUX_STEAM_PROCESS_NAME
-        : "steam.exe";
+    // The x86_64 Linux client runs steam-runtime-launcher-service, the ARM64 client (e.g. Steam
+    // Frame) does not. Linux process detection searches full "ps" command lines - include a
+    // trailing space on "steamrtarm64/steam" to avoid matching "steamrtarm64/steamwebhelper".
+    private static readonly PROCESS_NAMES: string[] = process.platform === "linux"
+        ? ["steam-runtime-launcher-service", "steamrtarm64/steam\x20"]
+        : ["steam.exe"];
 
     private static instance: SteamService;
 
@@ -49,7 +47,7 @@ export class SteamService {
     }
 
     public async isSteamRunning(): Promise<boolean> {
-        const steamProcessRunning = await isProcessRunning(SteamService.PROCESS_NAME);
+        const steamProcessRunning = await this.isAnySteamProcessRunning();
         if (process.platform === "linux") {
             return steamProcessRunning;
         }
@@ -57,8 +55,23 @@ export class SteamService {
         return steamProcessRunning && !!activeUser;
     }
 
+    private async isAnySteamProcessRunning(): Promise<boolean> {
+        for (const processName of SteamService.PROCESS_NAMES) {
+            if (await isProcessRunning(processName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public async getSteamPid(): Promise<number> {
-        return getProcessId(SteamService.PROCESS_NAME);
+        for (const processName of SteamService.PROCESS_NAMES) {
+            const pid = await getProcessId(processName);
+            if (pid) {
+                return pid;
+            }
+        }
+        return null;
     }
 
     /**
@@ -190,6 +203,40 @@ export class SteamService {
             });
 
         return folders;
+    }
+
+    // Steam user logged in most recently: account id (userdata folder name) from config/loginusers.vdf
+    private async getMostRecentUserId(steamPath: string): Promise<string | undefined> {
+        const loginUsers = await readFile(path.join(steamPath, "config", "loginusers.vdf"), { encoding: "utf-8" })
+            .then(data => parse(data)?.users ?? {})
+            .catch((): Record<string, any> => ({}));
+        const ids = Object.keys(loginUsers).filter(id => /^\d+$/.test(id));
+        const mostRecent = ids.find(id => String(loginUsers[id]?.MostRecent) === "1")
+            ?? ids.sort((a, b) => Number(loginUsers[b]?.timestamp ?? 0) - Number(loginUsers[a]?.timestamp ?? 0))[0];
+        return mostRecent ? (BigInt(mostRecent) - BigInt("76561197960265728")).toString() : undefined;
+    }
+
+    // Per-game "Foveated Rendering" switch in the Steam client (game properties), stored as
+    // apps/<appId>/FDMEnable in the user's localconfig.vdf; absent when off.
+    public async isFoveatedRenderingEnabled(appId: string, steamPath?: string): Promise<boolean> {
+        steamPath ||= await this.getSteamPath();
+        if (!steamPath) {
+            return false;
+        }
+
+        const userId = await this.getMostRecentUserId(steamPath);
+        if (!userId) {
+            return false;
+        }
+
+        const localConfig = await readFile(path.join(steamPath, "userdata", userId, "config", "localconfig.vdf"), { encoding: "utf-8" })
+            .then(data => parse(data))
+            .catch((err): undefined => {
+                log.warn("Could not read Steam localconfig.vdf", err);
+                return undefined;
+            });
+        const apps = localConfig?.UserLocalConfigStore?.Software?.Valve?.Steam?.apps;
+        return String(apps?.[appId]?.FDMEnable) === "1";
     }
 
     private async getShortcutsPath(userId: number): Promise<string> {

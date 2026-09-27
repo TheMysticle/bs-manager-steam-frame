@@ -3,7 +3,24 @@
 This is a personal fork of [BSManager](https://github.com/Zagrios/bs-manager) — an
 all-in-one tool for installing and managing modded Beat Saber — carrying the
 ARM64/SteamOS fixes needed to run it on the **Steam Frame**, on top of current
-upstream `master`.
+upstream `master`. It also adds an **ARM64 tab** that installs a native ARM64 build of Beat
+Saber ([bs-arm64](https://github.com/DaVarga/bs-arm64)) for supported versions, and an
+**experimental branch** with a hand-maintained mod list for Beat Saber 1.45.1, which BeatMods
+doesn't support yet.
+
+> [!NOTE]
+> **[How to install on the Steam Frame](docs/steam-frame.md)**
+>
+> Unofficial; the original project is [Zagrios/bs-manager](https://github.com/Zagrios/bs-manager).
+
+<!-- PROJECT SHIELDS -->
+<!--
+*** I'm using markdown "reference style" links for readability.
+*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
+*** See the bottom of this document for the declaration of the reference variables
+*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
+*** https://www.markdownguide.org/basic-syntax/#reference-style-links
+-->
 
 ## What this fork changes, and why
 
