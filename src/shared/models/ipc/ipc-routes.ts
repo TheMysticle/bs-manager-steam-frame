@@ -164,6 +164,8 @@ export interface IpcChannelMapping {
     /* ** linux.ipcs ** */
     "linux.set-proton-folder": { request: string, response: boolean };
     "linux.verify-proton-folder": { request: string | void, response: boolean };
+    "linux.set-bs-arm64-proton-folder": { request: string, response: boolean };
+    "linux.verify-bs-arm64-proton-folder": { request: string | void, response: boolean };
     "linux.get-wine-prefix-path": { request: void, response: string };
 
     /* ** bs-arm64.ipcs ** */

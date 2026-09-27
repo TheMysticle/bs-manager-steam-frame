@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Observable } from "rxjs";
 import { BSVersion } from "shared/bs-version.interface";
-import { BS_ARM64_REPOSITORY, BsArm64Progress, BsArm64Status } from "shared/models/bs-arm64/bs-arm64.model";
+import { BS_ARM64_REPOSITORY, BS_ARM64_SUPPORTED_VERSIONS, BsArm64Progress, BsArm64Status } from "shared/models/bs-arm64/bs-arm64.model";
 import { BsmButton } from "renderer/components/shared/bsm-button.component";
 import { BsmCheckbox } from "renderer/components/shared/bsm-checkbox.component";
 import { BsmLink } from "renderer/components/shared/bsm-link.component";
@@ -87,7 +87,7 @@ export function Arm64Slide({ version, status, onStatusChange }: Props) {
                 </div>
 
                 {status?.unsupported ? (
-                    <p className="text-sm font-bold text-red-500">{t(`pages.version-viewer.arm64.unsupported.${status.unsupported}`)}</p>
+                    <p className="text-sm font-bold text-red-500">{t(`pages.version-viewer.arm64.unsupported.${status.unsupported}`, { versions: BS_ARM64_SUPPORTED_VERSIONS.join(", ") })}</p>
                 ) : (
                     <>
                         <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -97,7 +97,7 @@ export function Arm64Slide({ version, status, onStatusChange }: Props) {
                                     ? t(status.mods ? "pages.version-viewer.arm64.installed-mods" : "pages.version-viewer.arm64.installed-no-mods", { release: status.installedRelease ?? "?" })
                                     : t("pages.version-viewer.arm64.not-installed")}
                             </span>
-                            <span className="font-bold">Proton</span>
+                            <span className="font-bold">{t("pages.version-viewer.arm64.native-proton")}</span>
                             <span>{status?.protonVersion ?? "?"}</span>
                         </div>
 

@@ -65,10 +65,10 @@ When it prints `done`, BSManager is in the Frame's **Launch program** list (see 
 
 ## Native ARM64 Beat Saber
 
-BSManager runs the x64 version of Beat Saber through emulation. For **1.44.1** it can install a
+BSManager runs the x64 version of Beat Saber through emulation. For **1.45.1** it can install a
 native ARM64 build instead, which needs less than half the CPU time per frame:
 
-1. Download or select Beat Saber **1.44.1** in BSManager. To keep the x64 version too, work on a
+1. Download or select Beat Saber **1.45.1** in BSManager. To keep the x64 version too, work on a
    copy: gear menu at the top right → **Clone**.
 
    ![Version menu with Clone](images/steam-frame/bsm-clone.webp)
@@ -87,15 +87,15 @@ Tip: turn off **Adaptive SFX** (Solo → song selection → **Player Settings** 
 list). On ARM64 its loudness measurement is expensive and makes frame times less steady.
 
 Tip: turn off **Screen Distortion** in the game's graphics settings. It costs a lot of GPU time on the
-Frame, and bs-arm64 v0.1.6 shows frozen ghost images with it on.
+Frame, and older bs-arm64 releases (this fork's included, unverified as of this port) showed frozen
+ghost images with it on.
 
 Foveated rendering: open Beat Saber in your **Steam** library → ⚙ → **Properties** → **Performance** and
 turn on **Foveated Rendering**. BSManager reads that switch and starts the native version with
 eye-tracked foveated rendering: the area you look at
 is rendered at full resolution and the edges at lower resolution, which saves GPU time and battery.
-Eye tracking needs bs-arm64 0.2.0 or later; 0.1.7 uses a fixed profile instead.
 
-Details: [bs-arm64](https://github.com/DaVarga/bs-arm64).
+Details: [bs-arm64](https://github.com/TheMysticle/bs-arm64).
 
 ## Update or remove
 

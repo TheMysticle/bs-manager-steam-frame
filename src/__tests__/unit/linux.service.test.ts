@@ -3,10 +3,9 @@ import path from "path";
 import { LinuxService } from "main/services/linux.service";
 import { BS_APP_ID } from "main/constants";
 import { LaunchMod, LaunchMods } from "shared/models/bs-launch/launch-option.interface";
-import { LaunchOption } from "shared/models/bs-launch";
+import { BSLaunchError, LaunchOption } from "shared/models/bs-launch";
 import { bsmExec } from "main/helpers/os.helpers";
 import { isBsArm64Installed, isBsArm64ModsDisabled } from "main/helpers/bs-arm64.helpers";
-import { BSLaunchError } from "shared/models/bs-launch";
 
 jest.mock("electron", () => ({
     app: { getPath: () => "" },
@@ -251,7 +250,7 @@ describe("LinuxService.buildEnvVariables", () => {
         const verifyProtonPath = jest.spyOn(service, "verifyProtonPath").mockReturnValue(false);
 
         await expect(service.setProtonFolder("  /invalid-proton  ")).resolves.toBe(false);
-        expect(verifyProtonPath).toHaveBeenCalledWith("/invalid-proton");
+        expect(verifyProtonPath).toHaveBeenCalledWith("/invalid-proton", "default");
         expect((service as any).staticConfig.set).not.toHaveBeenCalled();
     });
 

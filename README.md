@@ -4,7 +4,7 @@ This is a personal fork of [BSManager](https://github.com/Zagrios/bs-manager) �
 all-in-one tool for installing and managing modded Beat Saber — carrying the
 ARM64/SteamOS fixes needed to run it on the **Steam Frame**, on top of current
 upstream `master`. It also adds an **ARM64 tab** that installs a native ARM64 build of Beat
-Saber ([bs-arm64](https://github.com/DaVarga/bs-arm64)) for supported versions, and an
+Saber ([bs-arm64](https://github.com/TheMysticle/bs-arm64)) for supported versions, and an
 **experimental branch** with a hand-maintained mod list for Beat Saber 1.45.1, which BeatMods
 doesn't support yet.
 
@@ -144,7 +144,7 @@ need this manual step.
 ## Native ARM64 build (the ARM64 tab / bs-arm64) — Steam Launch Options are required
 
 > [!IMPORTANT]
-> **If you want to launch the native ARM64 build ([bs-arm64](https://github.com/DaVarga/bs-arm64))
+> **If you want to launch the native ARM64 build ([bs-arm64](https://github.com/TheMysticle/bs-arm64))
 > directly from your Steam library instead of through BSManager, you must add
 > these environment variables to Beat Saber's Steam Launch Options.** They are
 > not optional convenience settings — without them the native build will not
@@ -174,21 +174,35 @@ need this manual step.
 > BSManager's own Proton install setting below** — they don't need to match,
 > and changing one doesn't affect the other.
 
-This Steam-launch path is completely independent of BSManager's own "Play"
-button and its own Proton setting (see **Config** below). If BSManager's own
-Proton install is set to something other than the exact build bs-arm64 was
-installed against, using BSManager's own "Play" button on an ARM64-patched
-instance will fail with a Proton-mismatch error — that's expected. Launch the
-patched instance from your **Steam library** instead, with the Launch Options
-above; BSManager is still the tool used to *install* bs-arm64 onto an
-instance (from its ARM64 tab), just not necessarily what you use to run it
-afterward.
+BSManager itself has a dedicated **"Native ARM64 Proton folder"** setting
+(Settings, right below the main Proton folder) for exactly this: point it at
+the same Proton build bs-arm64 was installed against, and BSManager's own
+"Play" button (and any Steam shortcut it generates) will detect a
+bs-arm64-patched instance and launch it with that Proton automatically,
+instead of the main Proton folder setting. This is a **separate setting from
+BSManager's main Proton folder** (used to patch/launch regular instances,
+still Proton Experimental for BSIPA - see **Config** below); the two don't
+need to match, and BSManager picks whichever one applies per instance.
+
+This means, once both Proton folders are configured, BSManager's "Play"
+button works directly on an ARM64-patched instance without a Proton-mismatch
+error. Launching from your **Steam library** with the manual Launch Options
+above is still required if you want to start the game from Steam directly
+without going through BSManager at all (e.g. via Steam Input, a Steam
+shortcut/tile, or VR dashboard) - Steam has no way to know about BSManager's
+per-instance Proton selection.
 
 ## Config
 
 On first launch, pick the default install location for game files, then point
 BSManager at your Proton install, e.g.
 `~/.local/share/Steam/steamapps/common/Proton - Experimental`.
+
+If you plan to use the native ARM64 build, also set **Native ARM64 Proton
+folder** in Settings (right below the Proton folder above) to the exact
+Proton build bs-arm64 was installed against, e.g.
+`~/.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)` — see **Native
+ARM64 build** above for why this needs to be a separate setting.
 
 > [!WARNING]
 > **You must set this to Proton Experimental, not any other Proton version.**

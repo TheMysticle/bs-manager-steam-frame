@@ -20,6 +20,7 @@ import { LaunchMods } from "shared/models/bs-launch/launch-option.interface";
 import { app } from "electron";
 import { parseLaunchOptions } from "main/helpers/launchOptions.helper";
 import { buildWindowsPowerShellArgs, getWindowsPowerShellPath } from "main/helpers/windows-powershell.helper";
+import { isBsArm64Installed } from "main/helpers/bs-arm64.helpers";
 
 const ELEVATED_HELPER_PID_TIMEOUT_MS = 60_000;
 const ELEVATED_HELPER_PID_PREFIX = "BSM_ADMIN_HELPER_PID:";
@@ -517,7 +518,7 @@ export class SteamLauncherService extends AbstractLauncherService implements Sto
             } = parseLaunchOptions(launchOptions.command, {
                 commandReplacement: process.platform === "win32"
                     ? `"${bsExePath}"`
-                    : `${await this.linux.getProtonPrefix()} "${bsExePath}"`,
+                    : `${await this.linux.getProtonPrefix("run", isBsArm64Installed(bsFolderPath) ? "bs-arm64" : "default")} "${bsExePath}"`,
             });
             this.updateEnvVariables(env, customEnv);
 

@@ -72,6 +72,11 @@ export interface StaticConfigKeyValues {
 
     // Linux Specific static configs
     "proton-folder": string;
+    // Proton build bs-arm64 (the native ARM64 build) was installed against, e.g.
+    // "Proton 11.0 (ARM64)". Kept separate from "proton-folder" above: that one patches/
+    // launches regular instances (and today needs Proton Experimental for BSIPA), while
+    // this one must be the exact Proton bs-arm64's Wine builtins were compiled for.
+    "bs-arm64-proton-folder": string;
     "versions": BSVersion[];
 };
 

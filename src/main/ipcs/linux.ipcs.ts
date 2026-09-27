@@ -14,6 +14,16 @@ ipc.on("linux.verify-proton-folder", (protonFolder, reply) => {
     reply(of(linuxService.verifyProtonPath(protonFolder || "")));
 });
 
+ipc.on("linux.set-bs-arm64-proton-folder", (protonFolder, reply) => {
+    const linuxService = LinuxService.getInstance();
+    reply(from(linuxService.setProtonFolder(protonFolder, "bs-arm64")));
+});
+
+ipc.on("linux.verify-bs-arm64-proton-folder", (protonFolder, reply) => {
+    const linuxService = LinuxService.getInstance();
+    reply(of(linuxService.verifyProtonPath(protonFolder || "", "bs-arm64")));
+});
+
 ipc.on("linux.get-wine-prefix-path", (_, reply) => {
     const linuxService = LinuxService.getInstance();
     reply(of(linuxService.getWinePrefixPath()));

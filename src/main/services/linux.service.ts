@@ -15,6 +15,12 @@ import { tryit } from "shared/helpers/error.helpers";
 import { isBsArm64Installed, isBsArm64ModsDisabled } from "main/helpers/bs-arm64.helpers";
 import { SteamService } from "./steam.service";
 
+// "default": BSManager's own Proton, used to patch/launch regular instances.
+// "bs-arm64": the Proton build a native ARM64 (bs-arm64) instance was installed against -
+// see buildBsArm64EnvVariables. Kept as a separate setting because the two can legitimately
+// differ (e.g. Proton Experimental for BSIPA vs. Proton 11.0 (ARM64) for the native build).
+export type ProtonKind = "default" | "bs-arm64";
+
 export class LinuxService {
     private static instance: LinuxService;
 
@@ -40,6 +46,7 @@ export class LinuxService {
 
     private nixOS: boolean | undefined;
     private winePath = "";
+    private arm64WinePath = "";
 
     private constructor() {
         this.installLocationService = InstallationLocationService.getInstance();
@@ -53,20 +60,25 @@ export class LinuxService {
         return path.resolve(sharedFolder, "compatdata");
     }
 
-    public async getProtonPrefix(action: "run" | "runinprefix" = "run") {
-        const protonPath = await this.getProtonPath();
+    public async getProtonPrefix(action: "run" | "runinprefix" = "run", kind: ProtonKind = "default") {
+        const protonPath = await this.getProtonPath(kind);
         return await this.isNixOS()
             ? `steam-run "${protonPath}" ${action}`
             : `"${protonPath}" ${action}`;
     }
 
-    public getProtonFolder(): string | undefined {
-        return this.staticConfig.has("proton-folder") ? this.staticConfig.get("proton-folder") : undefined;
+    private protonConfigKey(kind: ProtonKind): "proton-folder" | "bs-arm64-proton-folder" {
+        return kind === "bs-arm64" ? "bs-arm64-proton-folder" : "proton-folder";
+    }
+
+    public getProtonFolder(kind: ProtonKind = "default"): string | undefined {
+        const key = this.protonConfigKey(kind);
+        return this.staticConfig.has(key) ? this.staticConfig.get(key) : undefined;
     }
 
     // Build of the selected Proton from its "version" file ("<timestamp> proton-11.0-2c-arm64")
-    public getProtonBuild(): string | undefined {
-        const folder = this.getProtonFolder();
+    public getProtonBuild(kind: ProtonKind = "default"): string | undefined {
+        const folder = this.getProtonFolder(kind);
         const versionFile = folder && path.join(folder, "version");
         if (!versionFile || !fs.existsSync(versionFile)) {
             return undefined;
@@ -74,25 +86,36 @@ export class LinuxService {
         return fs.readFileSync(versionFile, "utf8").trim().split(/\s+/)[1];
     }
 
-    private async getProtonPath(): Promise<string> {
-        if (!this.staticConfig.has("proton-folder")) {
+    private async getProtonPath(kind: ProtonKind = "default"): Promise<string> {
+        const key = this.protonConfigKey(kind);
+        const [notSetError, notFoundError] = kind === "bs-arm64"
+            ? [BSLaunchError.BS_ARM64_PROTON_NOT_SET, BSLaunchError.BS_ARM64_PROTON_NOT_FOUND]
+            : [BSLaunchError.PROTON_NOT_SET, BSLaunchError.PROTON_NOT_FOUND];
+
+        if (!this.staticConfig.has(key)) {
             throw CustomError.fromError(
-                new Error("Proton folder not set"),
-                BSLaunchError.PROTON_NOT_SET
+                new Error(`${key} not set`),
+                notSetError
             );
         }
         const protonPath = path.join(
-            this.staticConfig.get("proton-folder"),
+            this.staticConfig.get(key),
             this.PROTON_BINARY_PREFIX
         );
         if (!fs.pathExistsSync(protonPath)) {
             throw CustomError.fromError(
                 new Error("Could not locate proton binary"),
-                BSLaunchError.PROTON_NOT_FOUND
+                notFoundError
             );
         }
 
         return protonPath;
+    }
+
+    // Which Proton kind to use for a given Beat Saber instance: bs-arm64's dedicated Proton
+    // when it's a native ARM64-patched instance, otherwise BSManager's own default Proton.
+    private protonKindFor(bsFolderPath: string): ProtonKind {
+        return isBsArm64Installed(bsFolderPath) ? "bs-arm64" : "default";
     }
 
     public async buildEnvVariables(
@@ -143,7 +166,7 @@ export class LinuxService {
     private async buildBsArm64EnvVariables(steamPath: string, bsFolderPath: string): Promise<Record<string, string>> {
         const runtimeDir = path.join(this.getCompatDataPath(), "pfx", "drive_c", "bs-arm64");
         const builtFor = tryit(() => fs.readFileSync(path.join(runtimeDir, "proton-version"), "utf8").trim()).result;
-        const protonBuild = this.getProtonBuild();
+        const protonBuild = this.getProtonBuild("bs-arm64");
         if (builtFor !== protonBuild) {
             throw CustomError.fromError(
                 new Error(`Native ARM64 files were set up for ${builtFor}, but Proton is ${protonBuild}`),
@@ -170,23 +193,30 @@ export class LinuxService {
         return envVars;
     }
 
-    public async setProtonFolder(protonFolder: string): Promise<boolean> {
+    public async setProtonFolder(protonFolder: string, kind: ProtonKind = "default"): Promise<boolean> {
         const trimmedProtonFolder = protonFolder.trim();
-        if (!trimmedProtonFolder || !this.verifyProtonPath(trimmedProtonFolder)) {
+        if (!trimmedProtonFolder || !this.verifyProtonPath(trimmedProtonFolder, kind)) {
             return false;
         }
 
-        await this.staticConfig.set("proton-folder", trimmedProtonFolder);
+        await this.staticConfig.set(this.protonConfigKey(kind), trimmedProtonFolder);
+        if (kind === "bs-arm64") {
+            // Reset so a subsequent isArm64Wine("bs-arm64") re-checks against the new folder
+            this.arm64WinePath = "";
+        } else {
+            this.winePath = "";
+        }
         return true;
     }
 
-    public verifyProtonPath(protonFolder: string = ""): boolean {
+    public verifyProtonPath(protonFolder: string = "", kind: ProtonKind = "default"): boolean {
+        const key = this.protonConfigKey(kind);
         if (protonFolder === "") {
-            if (!this.staticConfig.has("proton-folder")) {
+            if (!this.staticConfig.has(key)) {
                 return false;
             }
 
-            protonFolder = this.staticConfig.get("proton-folder");
+            protonFolder = this.staticConfig.get(key);
         }
 
         // Check if the proton binary exists
@@ -199,7 +229,11 @@ export class LinuxService {
         for (const winePath of this.WINE_BINARY_PREFIXES) {
             if (this.isExecutableFile(path.join(protonFolder, winePath))) {
                 // Reset this, in the case where the user reselects a new proton folder
-                this.winePath = "";
+                if (kind === "bs-arm64") {
+                    this.arm64WinePath = "";
+                } else {
+                    this.winePath = "";
+                }
                 return true;
             }
         }
@@ -219,16 +253,18 @@ export class LinuxService {
         }
     }
 
-    public getWinePath(): string {
-        if (this.winePath) {
-            return this.winePath;
+    public getWinePath(kind: ProtonKind = "default"): string {
+        const cached = kind === "bs-arm64" ? this.arm64WinePath : this.winePath;
+        if (cached) {
+            return cached;
         }
 
-        if (!this.staticConfig.has("proton-folder")) {
-            throw new Error("proton-folder variable not set");
+        const key = this.protonConfigKey(kind);
+        if (!this.staticConfig.has(key)) {
+            throw new Error(`${key} variable not set`);
         }
 
-        const protonFolder = this.staticConfig.get("proton-folder");
+        const protonFolder = this.staticConfig.get(key);
         let winePath = "";
         for (const prefixes of this.WINE_BINARY_PREFIXES) {
             winePath = path.join(protonFolder, prefixes);
@@ -243,12 +279,16 @@ export class LinuxService {
             throw new Error(`"${winePath}" binary file not found`);
         }
 
-        this.winePath = winePath;
+        if (kind === "bs-arm64") {
+            this.arm64WinePath = winePath;
+        } else {
+            this.winePath = winePath;
+        }
         return winePath;
     }
 
-    public isArm64Wine(): boolean {
-        return this.getWinePath().endsWith(this.ARM64_WINE_BINARY);
+    public isArm64Wine(kind: ProtonKind = "default"): boolean {
+        return this.getWinePath(kind).endsWith(this.ARM64_WINE_BINARY);
     }
 
     // Should be different from winePath, this is the "WINEPREFIX" env var
@@ -288,7 +328,7 @@ export class LinuxService {
         beatSaberFolderPath: string,
         commandPrefix?: string
     ): Promise<string> {
-        commandPrefix ??= await this.getProtonPrefix();
+        commandPrefix ??= await this.getProtonPrefix("run", this.protonKindFor(beatSaberFolderPath));
         const launchEnv = await this.buildEnvVariables(
             launchOptions, steamPath, beatSaberFolderPath
         );
@@ -359,7 +399,7 @@ export class LinuxService {
         steamPath: string,
         beatSaberFolderPath: string
     ): Promise<SteamShortcutData> {
-        const protonPath = await this.getProtonPath();
+        const protonPath = await this.getProtonPath(this.protonKindFor(beatSaberFolderPath));
         const command = await this.getCommand(
             launchOptions, steamPath, beatSaberFolderPath, "%command% run"
         );

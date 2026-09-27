@@ -30,5 +30,12 @@ export class LinuxService {
         return this.ipc.sendV2("linux.verify-proton-folder", path);
     }
 
+    public setBsArm64ProtonFolder(path: string): Observable<boolean> {
+        return this.ipc.sendV2("linux.set-bs-arm64-proton-folder", path);
+    }
+
+    public verifyBsArm64ProtonFolder(path?: string): Observable<boolean> {
+        return this.ipc.sendV2("linux.verify-bs-arm64-proton-folder", path);
+    }
 
 }

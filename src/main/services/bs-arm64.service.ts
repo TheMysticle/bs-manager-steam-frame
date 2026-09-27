@@ -86,7 +86,7 @@ export class BsArm64Service {
         const status: BsArm64Status = {
             installed,
             mods: installed && !isBsArm64ModsDisabled(versionPath),
-            protonVersion: this.linux.getProtonBuild(),
+            protonVersion: this.linux.getProtonBuild("bs-arm64"),
         };
 
         if (installed) {
@@ -96,7 +96,7 @@ export class BsArm64Service {
 
         if (process.platform !== "linux" || process.arch !== "arm64") {
             status.unsupported = BsArm64Unsupported.NOT_LINUX_ARM64;
-        } else if (!tryit(() => this.linux.isArm64Wine()).result) {
+        } else if (!tryit(() => this.linux.isArm64Wine("bs-arm64")).result) {
             status.unsupported = BsArm64Unsupported.PROTON_NOT_ARM64;
         } else if (!BS_ARM64_SUPPORTED_VERSIONS.includes(version.BSVersion)) {
             status.unsupported = BsArm64Unsupported.VERSION_NOT_SUPPORTED;
@@ -154,7 +154,7 @@ export class BsArm64Service {
 
     /** Newest release built for the selected Proton build, downloaded and unpacked. */
     private async prepareRelease(progress: (p: BsArm64Progress) => void): Promise<InstalledRelease> {
-        const protonBuild = this.linux.getProtonBuild();
+        const protonBuild = this.linux.getProtonBuild("bs-arm64");
         const { data: releases } = await this.request.getJSON<GithubRelease[]>(
             `https://api.github.com/repos/${BS_ARM64_REPOSITORY}/releases`
         );
@@ -219,7 +219,7 @@ export class BsArm64Service {
     // === Installer === //
 
     private prefixArgs(): string[] {
-        return ["--prefix", this.quote(this.linux.getCompatDataPath()), "--proton", this.quote(this.linux.getProtonFolder())];
+        return ["--prefix", this.quote(this.linux.getCompatDataPath()), "--proton", this.quote(this.linux.getProtonFolder("bs-arm64"))];
     }
 
     private async runInstaller(dir: string, args: string[], progress: (p: BsArm64Progress) => void): Promise<void> {

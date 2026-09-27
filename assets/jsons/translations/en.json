@@ -65,6 +65,7 @@
                 "installed-mods": "Installed ({release}, with mod support)",
                 "installed-no-mods": "Installed ({release}, without mods)",
                 "mod-support": "Mod support (BSIPA)",
+                "native-proton": "Native ARM64 Proton",
                 "install": "Install",
                 "reinstall": "Reinstall",
                 "uninstall": "Uninstall",
@@ -72,8 +73,8 @@
                 "proton-changed": "Proton changed ({installed} → {current}). Reinstall to use the new Proton.",
                 "unsupported": {
                     "NOT_LINUX_ARM64": "Only available on ARM64 Linux.",
-                    "PROTON_NOT_ARM64": "Select an ARM64 Proton (e.g. \"Proton 11.0 (ARM64)\") in the settings.",
-                    "VERSION_NOT_SUPPORTED": "Not available for this Beat Saber version yet. Supported: 1.44.1."
+                    "PROTON_NOT_ARM64": "Select an ARM64 Proton (e.g. \"Proton 11.0 (ARM64)\") for the \"Native ARM64 Proton folder\" setting.",
+                    "VERSION_NOT_SUPPORTED": "Not available for this Beat Saber version yet. Supported: {versions}."
                 },
                 "notifications": {
                     "install-success": "Native ARM64 build installed",
@@ -282,6 +283,14 @@
                 "description": "Change the folder to the Proton path. (eg. Proton - Experimental)",
                 "errors": {
                     "title": "Setting the Proton folder failed",
+                    "invalid-folder": "Invalid Proton folder path"
+                }
+            },
+            "bs-arm64-proton-folder": {
+                "title": "Native ARM64 Proton folder",
+                "description": "Proton folder for native ARM64 (bs-arm64) instances only - the exact build bs-arm64 was installed against (e.g. Proton 11.0 (ARM64)). Separate from the Proton folder above, which is still used for regular instances and BSIPA. BSManager auto-detects a native ARM64 instance and uses this Proton to launch it instead.",
+                "errors": {
+                    "title": "Setting the native ARM64 Proton folder failed",
                     "invalid-folder": "Invalid Proton folder path"
                 }
             },
@@ -592,6 +601,8 @@
                     "EXE_NOT_FOUND": "Missing files",
                     "PROTON_NOT_SET": "Proton folder not set",
                     "BS_ARM64_PROTON_MISMATCH": "Native ARM64 files outdated",
+                    "BS_ARM64_PROTON_NOT_SET": "Native ARM64 Proton folder not set",
+                    "BS_ARM64_PROTON_NOT_FOUND": "Native ARM64 Proton binary not found",
                     "PROTON_NOT_FOUND": "Proton binary not found",
                     "EXIT": "Abrupt stop",
                     "OCULUS_LIB_NOT_FOUND": "Oculus library not found",
@@ -608,6 +619,8 @@
                     "OCULUS_LIB_NOT_FOUND": "Check that the Oculus application is properly installed, and that the libraries are correctly defined in Oculus.",
                     "PROTON_NOT_SET": "Set the Proton path in settings.",
                     "BS_ARM64_PROTON_MISMATCH": "Proton was updated. Reinstall the native ARM64 build in the ARM64 tab.",
+                    "BS_ARM64_PROTON_NOT_SET": "Set the native ARM64 Proton folder in settings (separate from the main Proton folder).",
+                    "BS_ARM64_PROTON_NOT_FOUND": "Set the native ARM64 Proton folder in settings (separate from the main Proton folder).",
                     "PROTON_NOT_FOUND": "Set the Proton path in settings.",
                     "ORIGINAL_OCULUS_NOT_INSTALLED": "Beat Saber must be installed from the Oculus app before opening."
                 },

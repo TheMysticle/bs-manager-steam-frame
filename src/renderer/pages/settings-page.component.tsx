@@ -101,6 +101,8 @@ export function SettingsPage() {
     const [installationFolderInput, setInstallationFolderInput] = useState("");
     const [protonFolder, setProtonFolder] = useState("");
     const [protonFolderInput, setProtonFolderInput] = useState("");
+    const [bsArm64ProtonFolder, setBsArm64ProtonFolder] = useState("");
+    const [bsArm64ProtonFolderInput, setBsArm64ProtonFolderInput] = useState("");
     const [showSupporters, setShowSupporters] = useState(false);
     const [mapDeepLinksEnabled, setMapDeepLinksEnabled] = useState(false);
     const [playlistsDeepLinkEnabled, setPlaylistsDeepLinkEnabled] = useState(false);
@@ -119,6 +121,11 @@ export function SettingsPage() {
         staticConfig.get("proton-folder").then((folder = "") => {
             setProtonFolder(folder);
             setProtonFolderInput(folder);
+        });
+
+        staticConfig.get("bs-arm64-proton-folder").then((folder = "") => {
+            setBsArm64ProtonFolder(folder);
+            setBsArm64ProtonFolderInput(folder);
         });
 
     }, []);
@@ -222,6 +229,52 @@ export function SettingsPage() {
         } catch {
             notificationService.notifyError({
                 title: "pages.settings.proton-folder.errors.title",
+                desc: "misc.unknown",
+            });
+        }
+    };
+
+    const saveBsArm64ProtonFolder = async (path: string) => {
+        const protonPath = path.trim();
+        try {
+            if (!await lastValueFrom(linuxService.setBsArm64ProtonFolder(protonPath))) {
+                notificationService.notifyError({
+                    title: "pages.settings.bs-arm64-proton-folder.errors.title",
+                    desc: "pages.settings.bs-arm64-proton-folder.errors.invalid-folder",
+                });
+                return;
+            }
+
+            setBsArm64ProtonFolder(protonPath);
+            setBsArm64ProtonFolderInput(protonPath);
+        } catch {
+            notificationService.notifyError({
+                title: "pages.settings.bs-arm64-proton-folder.errors.title",
+                desc: "misc.unknown",
+            });
+        }
+    };
+
+    const setDefaultBsArm64ProtonFolder = async () => {
+        if (!progressBarService.require()) {
+            return;
+        }
+
+        try {
+            const pathResponse = await lastValueFrom(ipcService.sendV2("choose-folder", {
+                parent: "home",
+                defaultPath: ".steam/steam/steamapps/common",
+                showHidden: true,
+            }));
+
+            if (pathResponse.canceled || !pathResponse.filePaths?.length) {
+                return;
+            }
+
+            await saveBsArm64ProtonFolder(pathResponse.filePaths[0]);
+        } catch {
+            notificationService.notifyError({
+                title: "pages.settings.bs-arm64-proton-folder.errors.title",
                 desc: "misc.unknown",
             });
         }
@@ -421,6 +474,10 @@ export function SettingsPage() {
 
                 <SettingContainer os="linux" title="pages.settings.proton-folder.title" description="pages.settings.proton-folder.description">
                     <SettingFolderInput value={protonFolderInput} label={t("pages.settings.proton-folder.title")} canApply={!!protonFolderInput.trim() && protonFolderInput !== protonFolder} onChange={setProtonFolderInput} onApply={() => saveProtonFolder(protonFolderInput)} onChoose={setDefaultProtonFolder} />
+                </SettingContainer>
+
+                <SettingContainer os="linux" title="pages.settings.bs-arm64-proton-folder.title" description="pages.settings.bs-arm64-proton-folder.description">
+                    <SettingFolderInput value={bsArm64ProtonFolderInput} label={t("pages.settings.bs-arm64-proton-folder.title")} canApply={!!bsArm64ProtonFolderInput.trim() && bsArm64ProtonFolderInput !== bsArm64ProtonFolder} onChange={setBsArm64ProtonFolderInput} onApply={() => saveBsArm64ProtonFolder(bsArm64ProtonFolderInput)} onChoose={setDefaultBsArm64ProtonFolder} />
                 </SettingContainer>
 
                 <SettingContainer title="pages.settings.additional-content.title" description="pages.settings.additional-content.description">

@@ -67,6 +67,10 @@ jest.mock("main/helpers/os.helpers", () => ({
     getProcessesByName: jest.fn(),
 }));
 
+jest.mock("main/helpers/bs-arm64.helpers", () => ({
+    isBsArm64Installed: jest.fn(() => false),
+}));
+
 jest.mock("main/helpers/launchOptions.helper", () => ({
     parseLaunchOptions: jest.fn(() => ({
         env: {},
