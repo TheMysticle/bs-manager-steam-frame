@@ -1,13 +1,18 @@
 /**
  * Native ARM64 build of Beat Saber for ARM64 Proton (e.g. the Steam Frame).
- * The runtime itself lives in https://github.com/DaVarga/bs-arm64; BSManager
+ * The runtime itself lives in https://github.com/TheMysticle/bs-arm64, ported from
+ * DaVarga/bs-arm64 (originally 1.44.1-only) to target 1.45.1 instead. BSManager
  * downloads its release matching the selected Proton build and runs its installer.
+ *
+ * Each bs-arm64 release only ever targets one game version at a time (its
+ * versions.env pins a single GAME_VERSION/UNITY_VERSION) - unlike DaVarga's
+ * upstream repo, this fork's releases are 1.45.1-only, not 1.44.1.
  */
 
-export const BS_ARM64_REPOSITORY = "DaVarga/bs-arm64";
+export const BS_ARM64_REPOSITORY = "TheMysticle/bs-arm64";
 
 // Game versions the bs-arm64 releases support (the installer checks it again).
-export const BS_ARM64_SUPPORTED_VERSIONS = ["1.44.1"];
+export const BS_ARM64_SUPPORTED_VERSIONS = ["1.45.1"];
 
 export enum BsArm64Unsupported {
     NOT_LINUX_ARM64 = "NOT_LINUX_ARM64",
