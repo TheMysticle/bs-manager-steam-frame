@@ -3,7 +3,7 @@
 This fork runs on the Steam Frame (ARM64 SteamOS). Installing it takes one command:
 
 ```sh
-curl -fsSL https://github.com/DaVarga/bs-manager/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install.sh | bash
 ```
 
 It installs BSManager to `~/Applications/BSManager.AppImage`, adds it to the app menu (a `.desktop`
@@ -58,7 +58,7 @@ Answer `yes` to the fingerprint question the first time and enter the password. 
 install command:
 
 ```sh
-curl -fsSL https://github.com/DaVarga/bs-manager/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install.sh | bash
 ```
 
 When it prints `done`, BSManager is in the Frame's **Launch program** list (see Option A, step 4).
@@ -102,6 +102,6 @@ Details: [bs-arm64](https://github.com/DaVarga/bs-arm64).
 - **Update:** BSManager offers updates itself. Running the install command again also updates.
 - **Remove:**
   ```sh
-  curl -fsSL https://github.com/DaVarga/bs-manager/releases/latest/download/install.sh | bash -s -- --uninstall
+  curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install.sh | bash -s -- --uninstall
   ```
   Your versions, maps and settings in `~/.local/share/BSManager` stay.

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Install (or update) BSManager for the Steam Frame / ARM64 SteamOS.
 #
-#   curl -fsSL https://github.com/DaVarga/bs-manager/releases/latest/download/install.sh | bash
+#   curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install.sh | bash
 #   curl -fsSL .../install.sh | bash -s -- --uninstall
 #
 # Puts the ARM64 AppImage at ~/Applications/BSManager.AppImage (a stable name, so
@@ -14,10 +14,10 @@
 #                     ~/.local/share/BSManager and ~/.config/bs-manager stays)
 #   --appimage FILE   install a local AppImage instead of downloading the latest release
 #
-# Environment: BSM_REPO (default DaVarga/bs-manager).
+# Environment: BSM_REPO (default TheMysticle/bs-manager-steam-frame).
 set -euo pipefail
 
-REPO=${BSM_REPO:-DaVarga/bs-manager}
+REPO=${BSM_REPO:-TheMysticle/bs-manager-steam-frame}
 APP_DIR=$HOME/Applications
 APPIMAGE=$APP_DIR/BSManager.AppImage
 DESKTOP_DIR=${XDG_DATA_HOME:-$HOME/.local/share}/applications
