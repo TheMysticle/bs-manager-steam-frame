@@ -2,7 +2,13 @@ import { BSVersion } from "shared/bs-version.interface";
 import { BbmFullMod, BbmMod, BbmModVersion, BbmPlatform } from "../../../shared/models/mods/mod.interface";
 import { RequestService } from "../request.service";
 import { BsStore } from "../../../shared/models/bs-store.enum";
+import { getExperimental1451Mods } from "./experimental-1451-mods";
 import log from "electron-log"
+
+// BeatMods has no entries at all for 1.45.1 yet (nothing published there as of this
+// writing). Serve a small, hand-maintained, experimental mod list for that version instead
+// of hitting BeatMods -- see experimental-1451-mods.ts for exactly what's in it.
+const EXPERIMENTAL_VERSIONS = ["1.45.1"];
 
 export class BeatModsApiService {
     private static instance: BeatModsApiService;
@@ -58,6 +64,13 @@ export class BeatModsApiService {
     public async getVersionMods(version: BSVersion): Promise<BbmFullMod[]> {
         if (this.versionModsCache.has(version.BSVersion)) {
             return this.versionModsCache.get(version.BSVersion);
+        }
+
+        if (EXPERIMENTAL_VERSIONS.includes(version.BSVersion)) {
+            const fullMods = getExperimental1451Mods();
+            this.versionModsCache.set(version.BSVersion, fullMods);
+            this.updateModsHashCache(fullMods.map(mod => mod.version));
+            return fullMods;
         }
 
         return this.requestService.getJSON<{ mods: {mod: BbmMod, latest: BbmModVersion}[] }>(this.getVersionModsUrl(version)).then(({ data }) => {
