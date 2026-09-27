@@ -188,8 +188,10 @@ pnpm install --frozen-lockfile
 log "Building bundled Rust helpers (aarch64-unknown-linux-musl)"
 # aws-lc-sys ships LTO bytecode objects that musl-gcc's linker can't
 # materialize; strip -flto=auto if the environment injected it.
-export CFLAGS="${CFLAGS/ -flto=auto/}"
-export LDFLAGS="${LDFLAGS/ -flto=auto/}"
+export CFLAGS="${CFLAGS-}"
+export LDFLAGS="${LDFLAGS-}"
+CFLAGS="${CFLAGS/ -flto=auto/}"
+LDFLAGS="${LDFLAGS/ -flto=auto/}"
 pnpm run build-rust-scripts
 
 log "Building BSManager"
