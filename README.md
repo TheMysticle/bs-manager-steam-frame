@@ -42,6 +42,12 @@ while PRs #1122–#1124 go through review.
 Requires SSH or terminal access to the Frame (enable Developer Mode and set an
 SSH password under Settings → Developer Settings on the device first).
 
+**Clone this repo with `git` directly on the Frame itself** — don't copy the
+files over from another machine (e.g. via `scp`/rsync/a tarball). `install.sh`
+expects a real git checkout: it uses `git` to detect and repair a build left
+in a broken state by an earlier crashed/interrupted run, which it can't do
+without the repo's `.git` history actually being there.
+
 ```sh
 git clone <this-repo-url>
 cd bs-manager-steam-frame
@@ -116,5 +122,10 @@ need this manual step.
 
 On first launch, pick the default install location for game files, then point
 BSManager at your Proton install, e.g.
-`~/.local/share/Steam/steamapps/common/Proton - Experimental` (PR #1122 notes
-Proton Experimental is required — 11.0 is missing ARM64 Mono).
+`~/.local/share/Steam/steamapps/common/Proton - Experimental`.
+
+> [!WARNING]
+> **You must set this to Proton Experimental, not any other Proton version.**
+> Proton 11.0 is missing the ARM64 Mono runtime that BSIPA's installer needs
+> (see PR #1122) — pointing BSManager at anything other than Proton
+> Experimental will make **BSIPA (IPA) installation fail**.
