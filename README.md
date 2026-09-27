@@ -141,6 +141,49 @@ If you re-create the Steam shortcut via BSManager *after* building from this
 fork, the generated `LaunchOptions` already come out correct and you shouldn't
 need this manual step.
 
+## Native ARM64 build (the ARM64 tab / bs-arm64) — Steam Launch Options are required
+
+> [!IMPORTANT]
+> **If you want to launch the native ARM64 build ([bs-arm64](https://github.com/DaVarga/bs-arm64))
+> directly from your Steam library instead of through BSManager, you must add
+> these environment variables to Beat Saber's Steam Launch Options.** They are
+> not optional convenience settings — without them the native build will not
+> start correctly (missing Steam/OpenXR integration, or a Vulkan device-creation
+> hang). Right-click Beat Saber in Steam → **Properties → General → Launch
+> Options**, and set it to exactly:
+>
+> ```
+> WINEDLLPATH="$STEAM_COMPAT_DATA_PATH/pfx/drive_c/bs-arm64" WINEDLLOVERRIDES="winhttp=n,b" DISABLE_VULKAN_FDM_INJECTION_LAYER=1 %command%
+> ```
+>
+> - `WINEDLLPATH` points Wine at the ARM64 builtins (`lsteamclient_a64.dll`,
+>   `wineopenxr_a64.dll`) that bs-arm64 installs into the prefix.
+> - `WINEDLLOVERRIDES="winhttp=n,b"` is the same mod-loader override as above.
+> - `DISABLE_VULKAN_FDM_INJECTION_LAYER=1` works around a real bug: Valve's
+>   foveated-rendering injection layer spins forever in `vkCreateDevice` under
+>   Proton ARM64 without it.
+
+> [!IMPORTANT]
+> **You must also set Beat Saber's own Proton version (Properties →
+> Compatibility → force the use of a specific Steam Play compatibility tool)
+> to the exact Proton build bs-arm64 was installed against — currently
+> "Proton 11.0 (ARM64)".** bs-arm64's native Wine builtins are compiled
+> against one specific Proton build; using a different one (including "Proton
+> Experimental (ARM64)") will not work, and bs-arm64's own tooling will refuse
+> to launch if it detects a mismatch. This is a **separate setting from
+> BSManager's own Proton install setting below** — they don't need to match,
+> and changing one doesn't affect the other.
+
+This Steam-launch path is completely independent of BSManager's own "Play"
+button and its own Proton setting (see **Config** below). If BSManager's own
+Proton install is set to something other than the exact build bs-arm64 was
+installed against, using BSManager's own "Play" button on an ARM64-patched
+instance will fail with a Proton-mismatch error — that's expected. Launch the
+patched instance from your **Steam library** instead, with the Launch Options
+above; BSManager is still the tool used to *install* bs-arm64 onto an
+instance (from its ARM64 tab), just not necessarily what you use to run it
+afterward.
+
 ## Config
 
 On first launch, pick the default install location for game files, then point
@@ -152,3 +195,13 @@ BSManager at your Proton install, e.g.
 > Proton 11.0 is missing the ARM64 Mono runtime that BSIPA's installer needs
 > (see PR #1122) — pointing BSManager at anything other than Proton
 > Experimental will make **BSIPA (IPA) installation fail**.
+>
+> This fork later merged in a workaround from [DaVarga/bs-manager](https://github.com/DaVarga/bs-manager)
+> (`getRunnableIpaPath` in `bs-mods-manager.service.ts`) that runs `IPA.exe`
+> forced to x86 (via FEX) instead of relying on
+> ARM64-native wine-mono, which in principle should make Proton 11.0 work for
+> this too — but that hasn't been verified end-to-end yet. Until it is,
+> **Proton Experimental (ARM64) remains the known-working, recommended
+> setting for BSManager's own Proton install**, independent of whatever
+> Proton you set for Beat Saber itself in Steam (see the native ARM64 section
+> above) — these are two separate settings and don't need to match.
