@@ -19,6 +19,13 @@ import log from "electron-log";
  *   - https://github.com/TheMysticle/BeatSaverUpdater
  *   - https://github.com/TheMysticle/WhyIsThereNoLeaderboard
  *   - https://github.com/TheMysticle/beatsaber-experimental-libs
+ *   - https://github.com/TheMysticle/CustomJSONData
+ *   - https://github.com/TheMysticle/Heck (also hosts NoodleExtensions and Chroma)
+ *
+ * CustomJSONData, Heck, NoodleExtensions, and Chroma have only been confirmed to build and
+ * load with zero Harmony/DI errors at boot -- NOT yet verified against a real gameplay load
+ * (per-note/per-event custom data on V4-format maps, Chroma's reworked light registration).
+ * Report issues if custom data or lighting colors don't apply correctly on real maps.
  *
  * Every GitHub-hosted entry below resolves its download URL and version from that repo's
  * *latest* GitHub release at request time (via the GitHub REST API), instead of a hardcoded
@@ -49,6 +56,10 @@ const BEATSAVERSHARP_ID = 145106;
 const BEATSAVERDOWNLOADER_ID = 145107;
 const BEATSAVERUPDATER_ID = 145108;
 const WHYISTHERENOLEADERBOARD_ID = 145109;
+const CUSTOMJSONDATA_ID = 145112;
+const HECK_ID = 145113;
+const NOODLEEXTENSIONS_ID = 145114;
+const CHROMA_ID = 145115;
 const INIPARSER_ID = 145110;
 const SCORESABERSHARP_ID = 145111;
 
@@ -64,12 +75,17 @@ interface GithubRelease {
     assets: GithubReleaseAsset[];
 }
 
-/** Resolves the download URL + version of a GitHub repo's latest release (its newest .zip asset). */
-async function getLatestGithubRelease(owner: string, repo: string): Promise<{ version: string; downloadUrl: string }> {
+/**
+ * Resolves the download URL + version of a GitHub repo's latest release. By default picks the
+ * release's first .zip asset (single-artifact repos); pass `assetName` to pick a specific asset
+ * by exact filename instead, for repos (like Heck, which also hosts NoodleExtensions and Chroma)
+ * whose latest release carries more than one mod's .zip.
+ */
+async function getLatestGithubRelease(owner: string, repo: string, assetName?: string): Promise<{ version: string; downloadUrl: string }> {
     const { data } = await RequestService.getInstance().getJSON<GithubRelease>(`https://api.github.com/repos/${owner}/${repo}/releases/latest`);
-    const asset = data.assets?.find(a => a.name.endsWith(".zip"));
+    const asset = assetName ? data.assets?.find(a => a.name === assetName) : data.assets?.find(a => a.name.endsWith(".zip"));
     if (!asset) {
-        throw new Error(`No .zip asset in latest release of ${owner}/${repo}`);
+        throw new Error(`No matching .zip asset (${assetName ?? "any"}) in latest release of ${owner}/${repo}`);
     }
     return { version: data.tag_name.replace(/^v/, ""), downloadUrl: asset.browser_download_url };
 }
@@ -130,6 +146,14 @@ async function fullModFromLatestRelease(params: {
     gitUrl: string;
     owner: string;
     repo: string;
+    /**
+     * Exact release asset filename to pick, for repos whose latest release carries more than
+     * one mod's .zip (Heck's release also has NoodleExtensions.zip and Chroma.zip). When set,
+     * the release tag can't be trusted as *this* mod's version (it names all of them at once),
+     * so the displayed modVersion always stays fallbackVersion -- only downloadUrl is resolved
+     * dynamically. Update fallbackVersion by hand on new releases for these repos.
+     */
+    assetName?: string;
     fallbackVersion: string;
     fallbackDownloadUrl: string;
     dependencies?: number[];
@@ -138,8 +162,8 @@ async function fullModFromLatestRelease(params: {
     let downloadUrl = params.fallbackDownloadUrl;
 
     try {
-        const latest = await getLatestGithubRelease(params.owner, params.repo);
-        modVersion = latest.version;
+        const latest = await getLatestGithubRelease(params.owner, params.repo, params.assetName);
+        modVersion = params.assetName ? params.fallbackVersion : latest.version;
         downloadUrl = latest.downloadUrl;
     } catch (error) {
         log.warn(`[experimental-1451-mods] Could not resolve latest release for ${params.owner}/${params.repo}, using fallback ${params.fallbackVersion}`, error);
@@ -158,7 +182,21 @@ async function fullModFromLatestRelease(params: {
 }
 
 export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
-    const [siraUtil, bsml, songCore, iniParser, bsUtils, beatSaverSharp, beatSaverDownloader, beatSaverUpdater, whyIsThereNoLeaderboard] = await Promise.all([
+    const [
+        siraUtil,
+        bsml,
+        songCore,
+        iniParser,
+        bsUtils,
+        beatSaverSharp,
+        beatSaverDownloader,
+        beatSaverUpdater,
+        whyIsThereNoLeaderboard,
+        customJsonData,
+        heck,
+        noodleExtensions,
+        chroma,
+    ] = await Promise.all([
         fullModFromLatestRelease({
             id: SIRAUTIL_ID,
             name: "SiraUtil",
@@ -265,6 +303,57 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             fallbackDownloadUrl: "https://github.com/TheMysticle/WhyIsThereNoLeaderboard/releases/download/v1.0.3-bs1.45.1/WhyIsThereNoLeaderboard-1.0.3-bs1.45.1-ce72195.zip",
             dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID],
         }),
+        fullModFromLatestRelease({
+            id: CUSTOMJSONDATA_ID,
+            name: "CustomJSONData",
+            summary: "[Experimental 1.45.1 port] Lets mappers include arbitrary data in beatmaps, and lets modders access that data. Required by Heck/Noodle Extensions/Chroma. V4 beatmap-format custom data support is new and not yet verified against real gameplay.",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/TheMysticle/CustomJSONData",
+            owner: "TheMysticle",
+            repo: "CustomJSONData",
+            fallbackVersion: "2.6.8-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/CustomJSONData/releases/download/v2.6.8-bs1.45.1/CustomJSONData.zip",
+            dependencies: [BSIPA_ID],
+        }),
+        fullModFromLatestRelease({
+            id: HECK_ID,
+            name: "Heck",
+            summary: "[Experimental 1.45.1 port] Shared framework library for Noodle Extensions and Chroma.",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/TheMysticle/Heck",
+            owner: "TheMysticle",
+            repo: "Heck",
+            assetName: "Heck.zip",
+            fallbackVersion: "1.8.3-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/Heck.zip",
+            dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID, CUSTOMJSONDATA_ID],
+        }),
+        fullModFromLatestRelease({
+            id: NOODLEEXTENSIONS_ID,
+            name: "Noodle Extensions",
+            summary: "[Experimental 1.45.1 port] Custom note/environment/player animation for mappers.",
+            category: BbmCategories.Core,
+            gitUrl: "https://github.com/TheMysticle/Heck",
+            owner: "TheMysticle",
+            repo: "Heck",
+            assetName: "NoodleExtensions.zip",
+            fallbackVersion: "1.7.21-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/NoodleExtensions.zip",
+            dependencies: [BSIPA_ID, SIRAUTIL_ID, CUSTOMJSONDATA_ID, HECK_ID],
+        }),
+        fullModFromLatestRelease({
+            id: CHROMA_ID,
+            name: "Chroma",
+            summary: "[Experimental 1.45.1 port] Color/lighting extensions for mappers. Its light-registration internals were reworked for 1.45.1 and haven't been verified against real gameplay yet.",
+            category: BbmCategories.Core,
+            gitUrl: "https://github.com/TheMysticle/Heck",
+            owner: "TheMysticle",
+            repo: "Heck",
+            assetName: "Chroma.zip",
+            fallbackVersion: "2.9.22-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/TheMysticle/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/Chroma.zip",
+            dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID, CUSTOMJSONDATA_ID, HECK_ID],
+        }),
     ]);
 
     return [
@@ -295,5 +384,9 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
         beatSaverDownloader,
         beatSaverUpdater,
         whyIsThereNoLeaderboard,
+        customJsonData,
+        heck,
+        noodleExtensions,
+        chroma,
     ];
 }
