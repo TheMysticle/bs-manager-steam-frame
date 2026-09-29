@@ -22,10 +22,11 @@ import log from "electron-log";
  *   - https://github.com/TheMysticle/CustomJSONData
  *   - https://github.com/TheMysticle/Heck (also hosts NoodleExtensions and Chroma)
  *
- * CustomJSONData, Heck, NoodleExtensions, and Chroma have only been confirmed to build and
- * load with zero Harmony/DI errors at boot -- NOT yet verified against a real gameplay load
- * (per-note/per-event custom data on V4-format maps, Chroma's reworked light registration).
- * Report issues if custom data or lighting colors don't apply correctly on real maps.
+ * CustomJSONData, Heck, NoodleExtensions, and Chroma are confirmed working on real hardware:
+ * multiple V2/V3-format Noodle Extensions + Chroma maps played to completion across an extended
+ * session (custom note/wall/event animation, colored lighting), no crashes. V4 beatmap-format
+ * custom data (added to CustomJSONData) has not yet been tested against an actual V4-format map
+ * with custom data on real hardware -- report issues if that doesn't apply correctly.
  *
  * Every GitHub-hosted entry below resolves its download URL and version from that repo's
  * *latest* GitHub release at request time (via the GitHub REST API), instead of a hardcoded
@@ -306,7 +307,7 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
         fullModFromLatestRelease({
             id: CUSTOMJSONDATA_ID,
             name: "CustomJSONData",
-            summary: "[Experimental 1.45.1 port] Lets mappers include arbitrary data in beatmaps, and lets modders access that data. Required by Heck/Noodle Extensions/Chroma. V4 beatmap-format custom data support is new and not yet verified against real gameplay.",
+            summary: "[Experimental 1.45.1 port] Lets mappers include arbitrary data in beatmaps, and lets modders access that data. Required by Heck/Noodle Extensions/Chroma. Confirmed working with real V2/V3-format maps on real hardware; V4 beatmap-format custom data support is new and not yet verified against real gameplay.",
             category: BbmCategories.Library,
             gitUrl: "https://github.com/TheMysticle/CustomJSONData",
             owner: "TheMysticle",
@@ -344,7 +345,7 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
         fullModFromLatestRelease({
             id: CHROMA_ID,
             name: "Chroma",
-            summary: "[Experimental 1.45.1 port] Color/lighting extensions for mappers. Its light-registration internals were reworked for 1.45.1 and haven't been verified against real gameplay yet.",
+            summary: "[Experimental 1.45.1 port] Color/lighting extensions for mappers. Its light-registration internals were reworked for 1.45.1; confirmed working (colored lighting on real maps, no crashes) across an extended real-hardware session.",
             category: BbmCategories.Core,
             gitUrl: "https://github.com/TheMysticle/Heck",
             owner: "TheMysticle",
