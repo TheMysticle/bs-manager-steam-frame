@@ -1,5 +1,8 @@
-import { BbmCategories, BbmFullMod, BbmPlatform, BbmStatus } from "../../../shared/models/mods/mod.interface";
+import { BbmCategories, BbmContentHash, BbmFullMod, BbmPlatform, BbmStatus } from "../../../shared/models/mods/mod.interface";
 import { RequestService } from "../request.service";
+import { BsmZipExtractor } from "main/models/bsm-zip-extractor.class";
+import { lastValueFrom } from "rxjs";
+import crypto from "crypto";
 import log from "electron-log";
 
 /**
@@ -91,6 +94,43 @@ async function getLatestGithubRelease(owner: string, repo: string, assetName?: s
     return { version: data.tag_name.replace(/^v/, ""), downloadUrl: asset.browser_download_url };
 }
 
+/**
+ * Downloads a mod's zip and md5-hashes each file inside, in the {path, hash} shape BeatMods
+ * itself publishes as contentHashes.
+ *
+ * BsModsManagerService.getInstalledMods detects "is this mod installed" by md5-hashing files
+ * found in Plugins/Libs and looking that hash up against known content hashes -- first a local
+ * cache built from contentHashes entries in this very list, then (on a miss) the real BeatMods
+ * hashlookup API as a fallback. Every entry below used to publish contentHashes: [], so a local
+ * hash never matched anything here, and since none of these forked/rebuilt DLLs exist on the
+ * real BeatMods either, the fallback also always came up empty -- every mod in this list showed
+ * as "not installed" regardless of whether it actually was. Populating this properly (matching
+ * whatever's actually in the release right now, since the zip's contents can change between
+ * releases) fixes detection for all of them, not just the one that happened to get noticed.
+ */
+async function computeContentHashes(downloadUrl: string): Promise<BbmContentHash[]> {
+    try {
+        const buffer = await lastValueFrom(RequestService.getInstance().downloadBuffer(downloadUrl)).then(progress => progress.data);
+        const zip = await BsmZipExtractor.fromBuffer(buffer);
+        try {
+            const hashes: BbmContentHash[] = [];
+            for await (const entry of zip.entries()) {
+                if (entry.fileName.endsWith("/")) {
+                    continue;
+                }
+                const data = await entry.read();
+                hashes.push({ path: entry.fileName, hash: crypto.createHash("md5").update(data).digest("hex") });
+            }
+            return hashes;
+        } finally {
+            zip.close();
+        }
+    } catch (error) {
+        log.warn(`[experimental-1451-mods] Could not compute content hashes for ${downloadUrl}`, error);
+        return [];
+    }
+}
+
 function fullMod(params: {
     id: number;
     name: string;
@@ -100,6 +140,7 @@ function fullMod(params: {
     downloadUrl: string;
     modVersion: string;
     dependencies?: number[];
+    contentHashes?: BbmContentHash[];
 }): BbmFullMod {
     return {
         mod: {
@@ -127,7 +168,7 @@ function fullMod(params: {
             zipHash: params.downloadUrl,
             status: BbmStatus.Verified,
             dependencies: params.dependencies ?? [],
-            contentHashes: [],
+            contentHashes: params.contentHashes ?? [],
             supportedGameVersions: [{ id: 0, gameName: "BeatSaber", version: "1.45.1", defaultVersion: false }],
             downloadCount: 0,
         },
@@ -170,6 +211,8 @@ async function fullModFromLatestRelease(params: {
         log.warn(`[experimental-1451-mods] Could not resolve latest release for ${params.owner}/${params.repo}, using fallback ${params.fallbackVersion}`, error);
     }
 
+    const contentHashes = await computeContentHashes(downloadUrl);
+
     return fullMod({
         id: params.id,
         name: params.name,
@@ -179,6 +222,7 @@ async function fullModFromLatestRelease(params: {
         downloadUrl,
         modVersion,
         dependencies: params.dependencies,
+        contentHashes,
     });
 }
 
@@ -333,7 +377,7 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             id: NOODLEEXTENSIONS_ID,
             name: "Noodle Extensions",
             summary: "[Experimental 1.45.1 port] Custom note/environment/player animation for mappers.",
-            category: BbmCategories.Core,
+            category: BbmCategories.Gameplay,
             gitUrl: "https://github.com/TheMysticle/Heck",
             owner: "TheMysticle",
             repo: "Heck",
@@ -346,7 +390,7 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             id: CHROMA_ID,
             name: "Chroma",
             summary: "[Experimental 1.45.1 port] Color/lighting extensions for mappers. Its light-registration internals were reworked for 1.45.1; confirmed working (colored lighting on real maps, no crashes) across an extended real-hardware session.",
-            category: BbmCategories.Core,
+            category: BbmCategories.Lighting,
             gitUrl: "https://github.com/TheMysticle/Heck",
             owner: "TheMysticle",
             repo: "Heck",
