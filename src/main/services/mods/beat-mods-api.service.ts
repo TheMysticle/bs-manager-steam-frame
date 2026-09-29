@@ -5,10 +5,12 @@ import { BsStore } from "../../../shared/models/bs-store.enum";
 import { getExperimental1451Mods } from "./experimental-1451-mods";
 import log from "electron-log"
 
-// BeatMods has no entries at all for 1.45.1 yet (nothing published there as of this
-// writing). Serve a small, hand-maintained, experimental mod list for that version instead
-// of hitting BeatMods -- see experimental-1451-mods.ts for exactly what's in it.
-const EXPERIMENTAL_VERSIONS = ["1.45.1"];
+// BeatMods has no entries at all for 1.45.1/1.45.2 yet (nothing published there as of this
+// writing). Serve a small, hand-maintained, experimental mod list for those versions instead
+// of hitting BeatMods -- see experimental-1451-mods.ts for exactly what's in it. 1.45.2 is a
+// content-only patch on top of 1.45.1 (verified: every game DLL is byte-identical), so the
+// same mod builds apply to both.
+const EXPERIMENTAL_VERSIONS = ["1.45.1", "1.45.2"];
 
 export class BeatModsApiService {
     private static instance: BeatModsApiService;

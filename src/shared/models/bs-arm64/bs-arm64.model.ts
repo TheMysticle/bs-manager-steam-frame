@@ -4,15 +4,18 @@
  * DaVarga/bs-arm64 (originally 1.44.1-only) to target 1.45.1 instead. BSManager
  * downloads its release matching the selected Proton build and runs its installer.
  *
- * Each bs-arm64 release only ever targets one game version at a time (its
- * versions.env pins a single GAME_VERSION/UNITY_VERSION) - unlike DaVarga's
- * upstream repo, this fork's releases are 1.45.1-only, not 1.44.1.
+ * A bs-arm64 release's versions.env pins one Unity build (UNITY_VERSION) but can list
+ * several compatible GAME_VERSION_COMPAT entries when a game update didn't touch any
+ * file the runtime replaces or patches. 1.45.2 (2026-09-29) is one such case: it's a
+ * content-only patch (one song, a couple of beatmap/audio/editor data fixes) -- every
+ * Managed/*.dll, Beat Saber.exe and UnityPlayer.dll are byte-identical to 1.45.1, and
+ * the Unity version (6000.3.19f1) didn't change. The installer re-checks this itself.
  */
 
 export const BS_ARM64_REPOSITORY = "TheMysticle/bs-arm64";
 
 // Game versions the bs-arm64 releases support (the installer checks it again).
-export const BS_ARM64_SUPPORTED_VERSIONS = ["1.45.1"];
+export const BS_ARM64_SUPPORTED_VERSIONS = ["1.45.1", "1.45.2"];
 
 export enum BsArm64Unsupported {
     NOT_LINUX_ARM64 = "NOT_LINUX_ARM64",
