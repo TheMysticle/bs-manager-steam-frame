@@ -284,13 +284,13 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
         fullModFromLatestRelease({
             id: SONGCORE_ID,
             name: "SongCore",
-            summary: "[Experimental 1.45.1 port] A plugin for handling custom song additions in Beat Saber.",
+            summary: "[Experimental 1.45.1 port] A plugin for handling custom song additions in Beat Saber. Re-ported from upstream's real 3.16.0 (a full internal rewrite, not just a version bump); confirmed working across an extended real-hardware session with zero errors.",
             category: BbmCategories.Core,
             gitUrl: "https://github.com/experimental-beatsaber-mods/SongCore",
             owner: "experimental-beatsaber-mods",
             repo: "SongCore",
-            fallbackVersion: "3.15.3-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/SongCore/releases/download/v3.15.3-bs1.45.1/SongCore-3.15.3-bs1.45.1.zip",
+            fallbackVersion: "3.16.0-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/SongCore/releases/download/v3.16.0-bs1.45.1/SongCore.zip",
             dependencies: [BSIPA_ID, SIRAUTIL_ID, BSML_ID],
         }),
         fullModFromLatestRelease({
