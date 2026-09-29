@@ -24,12 +24,23 @@ import log from "electron-log";
  *   - https://github.com/experimental-beatsaber-mods/beatsaber-experimental-libs
  *   - https://github.com/experimental-beatsaber-mods/CustomJSONData
  *   - https://github.com/experimental-beatsaber-mods/Heck (also hosts NoodleExtensions and Chroma)
+ *   - https://github.com/experimental-beatsaber-mods/LeaderboardCore
+ *   - https://github.com/experimental-beatsaber-mods/pc-mod (ScoreSaber; also depends on
+ *     https://github.com/experimental-beatsaber-mods/legato, compiled directly into ScoreSaber.dll
+ *     rather than distributed as its own mod entry)
  *
  * CustomJSONData, Heck, NoodleExtensions, and Chroma are confirmed working on real hardware:
  * multiple V2/V3-format Noodle Extensions + Chroma maps played to completion across an extended
  * session (custom note/wall/event animation, colored lighting), no crashes. V4 beatmap-format
  * custom data (added to CustomJSONData) has not yet been tested against an actual V4-format map
  * with custom data on real hardware -- report issues if that doesn't apply correctly.
+ *
+ * ScoreSaber and LeaderboardCore build clean against real 1.45.1 assemblies but have NOT been
+ * installed/tested on real hardware yet. ScoreSaber is also deliberately viewing-only on this
+ * build: no dev token has been requested from the ScoreSaber team, so its own client-side trust
+ * gate is expected to refuse score uploads (this is the correct/sanctioned behavior for an
+ * unofficial build, not a bug -- see that fork's README for the research behind it). Leaderboard
+ * browsing and personal stats are unaffected either way.
  *
  * Every GitHub-hosted entry below resolves its download URL and version from that repo's
  * *latest* GitHub release at request time (via the GitHub REST API), instead of a hardcoded
@@ -66,6 +77,8 @@ const NOODLEEXTENSIONS_ID = 145114;
 const CHROMA_ID = 145115;
 const INIPARSER_ID = 145110;
 const SCORESABERSHARP_ID = 145111;
+const LEADERBOARDCORE_ID = 145116;
+const SCORESABER_ID = 145117;
 
 const placeholderAuthor = { id: 0, username: "TheMysticle", githubId: "TheMysticle", sponsorUrl: "", displayName: "TheMysticle", bio: "" };
 
@@ -241,6 +254,8 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
         heck,
         noodleExtensions,
         chroma,
+        leaderboardCore,
+        scoreSaber,
     ] = await Promise.all([
         fullModFromLatestRelease({
             id: SIRAUTIL_ID,
@@ -399,6 +414,30 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/Chroma.zip",
             dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID, CUSTOMJSONDATA_ID, HECK_ID],
         }),
+        fullModFromLatestRelease({
+            id: LEADERBOARDCORE_ID,
+            name: "LeaderboardCore",
+            summary: "[Experimental 1.45.1 port] Shared library for custom leaderboards (used by ScoreSaber's leaderboard UI).",
+            category: BbmCategories.Library,
+            gitUrl: "https://github.com/experimental-beatsaber-mods/LeaderboardCore",
+            owner: "experimental-beatsaber-mods",
+            repo: "LeaderboardCore",
+            fallbackVersion: "1.6.0-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/LeaderboardCore/releases/download/v1.6.0-bs1.45.1/LeaderboardCore.zip",
+            dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID],
+        }),
+        fullModFromLatestRelease({
+            id: SCORESABER_ID,
+            name: "ScoreSaber",
+            summary: "[Experimental 1.45.1 port] Online leaderboard for custom songs. VIEWING ONLY on this build -- no dev token has been requested, so score upload is expected to be refused by the client itself (see the fork's README for why that's the correct behavior, not a bug). Also requires a paired Legato compatibility-library port, not distributed separately since it compiles directly into this plugin.",
+            category: BbmCategories.Essential,
+            gitUrl: "https://github.com/experimental-beatsaber-mods/pc-mod",
+            owner: "experimental-beatsaber-mods",
+            repo: "pc-mod",
+            fallbackVersion: "3.4.2-bs1.45.1",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/pc-mod/releases/download/v3.4.2-bs1.45.1/ScoreSaber.zip",
+            dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID, SONGCORE_ID, LEADERBOARDCORE_ID],
+        }),
     ]);
 
     return [
@@ -433,5 +472,7 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
         heck,
         noodleExtensions,
         chroma,
+        leaderboardCore,
+        scoreSaber,
     ];
 }
