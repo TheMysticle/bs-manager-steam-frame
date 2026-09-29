@@ -34,7 +34,7 @@ export type GithubRelease = {
     assets: { name: string; browser_download_url: string }[];
 };
 
-type InstalledRelease = { tag: string; dir: string };
+type InstalledRelease = { tag: string; dir: string | undefined };
 
 /**
  * Newest release asset built for the given Proton build. Assets are named
@@ -125,7 +125,7 @@ export class BsArm64Service {
             (async () => {
                 const versionPath = await this.localVersions.getVersionPath(version);
                 const installed = await this.readInstalledRelease(versionPath);
-                const dir = installed && await fs.pathExists(path.join(installed.dir, "bs-arm64.sh"))
+                const dir = installed?.dir && await fs.pathExists(path.join(installed.dir, "bs-arm64.sh"))
                     ? installed.dir
                     : (await this.prepareRelease(msg => obs.next(msg))).dir;
                 await this.runInstaller(dir, ["uninstall", this.quote(versionPath), ...this.prefixArgs()], msg => obs.next(msg));
@@ -262,8 +262,19 @@ export class BsArm64Service {
         return (await fs.pathExists(file)) ? (await fs.readFile(file, "utf8")).trim() : undefined;
     }
 
+    // bsm-release.json is only written by our own install() below. When bs-arm64.sh was run
+    // directly instead (e.g. by hand over SSH), that file never gets created, so fall back to
+    // the tag the release tarball itself recorded (install/bs-arm64.sh copies it in as
+    // "release") -- without this, the ARM64 tab shows "?" for an install it can plainly see
+    // is there. There's no known download dir in that case; callers already handle a missing
+    // dir by re-downloading the release when they need its files (e.g. to uninstall).
     private async readInstalledRelease(versionPath: string): Promise<InstalledRelease | undefined> {
-        return fs.readJson(path.join(versionPath, BS_ARM64_STATE_DIR, RELEASE_FILE)).catch((): undefined => undefined);
+        const fromBsm = await fs.readJson(path.join(versionPath, BS_ARM64_STATE_DIR, RELEASE_FILE)).catch((): undefined => undefined);
+        if (fromBsm) {
+            return fromBsm;
+        }
+        const tag = await this.readStateFile(versionPath, "release");
+        return tag ? { tag, dir: undefined } : undefined;
     }
 
     private quote(value: string): string {
