@@ -13,17 +13,17 @@ import log from "electron-log";
  * cleanly against 1.45.1's actual assemblies and confirmed working in-headset (full stack,
  * including a fixed rendering bug in SongCore's loading indicator) on real hardware -- see
  * each fork's README/commit history for exactly what changed and why:
- *   - https://github.com/TheMysticle/SiraUtil
- *   - https://github.com/TheMysticle/BeatSaberMarkupLanguage
- *   - https://github.com/TheMysticle/SongCore
- *   - https://github.com/TheMysticle/Beat-Saber-Utils
- *   - https://github.com/TheMysticle/BeatSaverSharper
- *   - https://github.com/TheMysticle/BeatSaverDownloader
- *   - https://github.com/TheMysticle/BeatSaverUpdater
- *   - https://github.com/TheMysticle/WhyIsThereNoLeaderboard
- *   - https://github.com/TheMysticle/beatsaber-experimental-libs
- *   - https://github.com/TheMysticle/CustomJSONData
- *   - https://github.com/TheMysticle/Heck (also hosts NoodleExtensions and Chroma)
+ *   - https://github.com/experimental-beatsaber-mods/SiraUtil
+ *   - https://github.com/experimental-beatsaber-mods/BeatSaberMarkupLanguage
+ *   - https://github.com/experimental-beatsaber-mods/SongCore
+ *   - https://github.com/experimental-beatsaber-mods/Beat-Saber-Utils
+ *   - https://github.com/experimental-beatsaber-mods/BeatSaverSharper
+ *   - https://github.com/experimental-beatsaber-mods/BeatSaverDownloader
+ *   - https://github.com/experimental-beatsaber-mods/BeatSaverUpdater
+ *   - https://github.com/experimental-beatsaber-mods/WhyIsThereNoLeaderboard
+ *   - https://github.com/experimental-beatsaber-mods/beatsaber-experimental-libs
+ *   - https://github.com/experimental-beatsaber-mods/CustomJSONData
+ *   - https://github.com/experimental-beatsaber-mods/Heck (also hosts NoodleExtensions and Chroma)
  *
  * CustomJSONData, Heck, NoodleExtensions, and Chroma are confirmed working on real hardware:
  * multiple V2/V3-format Noodle Extensions + Chroma maps played to completion across an extended
@@ -247,11 +247,11 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "SiraUtil",
             summary: "[Experimental 1.45.1 port] A powerful utility mod which provides more tools to Beat Saber modders.",
             category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/SiraUtil",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/SiraUtil",
+            owner: "experimental-beatsaber-mods",
             repo: "SiraUtil",
             fallbackVersion: "3.4.0-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/SiraUtil/releases/download/v3.4.0-bs1.45.1/SiraUtil-3.4.0-bs1.45.1.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/SiraUtil/releases/download/v3.4.0-bs1.45.1/SiraUtil-3.4.0-bs1.45.1.zip",
             dependencies: [BSIPA_ID],
         }),
         fullModFromLatestRelease({
@@ -259,11 +259,11 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "BeatSaberMarkupLanguage",
             summary: "[Experimental 1.45.1 port] An XML-based UI system.",
             category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/BeatSaberMarkupLanguage",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/BeatSaberMarkupLanguage",
+            owner: "experimental-beatsaber-mods",
             repo: "BeatSaberMarkupLanguage",
             fallbackVersion: "1.14.2-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/BeatSaberMarkupLanguage/releases/download/v1.14.2-bs1.45.1/BSML-1.14.2-bs1.45.1.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/BeatSaberMarkupLanguage/releases/download/v1.14.2-bs1.45.1/BSML-1.14.2-bs1.45.1.zip",
             dependencies: [BSIPA_ID],
         }),
         fullModFromLatestRelease({
@@ -271,11 +271,11 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "SongCore",
             summary: "[Experimental 1.45.1 port] A plugin for handling custom song additions in Beat Saber.",
             category: BbmCategories.Core,
-            gitUrl: "https://github.com/TheMysticle/SongCore",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/SongCore",
+            owner: "experimental-beatsaber-mods",
             repo: "SongCore",
             fallbackVersion: "3.15.3-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/SongCore/releases/download/v3.15.3-bs1.45.1/SongCore-3.15.3-bs1.45.1.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/SongCore/releases/download/v3.15.3-bs1.45.1/SongCore-3.15.3-bs1.45.1.zip",
             dependencies: [BSIPA_ID, SIRAUTIL_ID, BSML_ID],
         }),
         fullModFromLatestRelease({
@@ -284,21 +284,21 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             summary: "[Experimental 1.45.1 port] .NET library for reading/writing INI data. Redistributed at the exact assembly identity (INIFileParser, Version=2.5.2.0) BS_Utils's IniFile utility references -- BeatMods' current listing ships a newer, renamed build (assembly INIParser 2.5.9.0) that does NOT satisfy that reference and causes a TypeLoadException at plugin startup.",
             category: BbmCategories.Library,
             gitUrl: "https://github.com/rickyah/ini-parser",
-            owner: "TheMysticle",
+            owner: "experimental-beatsaber-mods",
             repo: "beatsaber-experimental-libs",
             fallbackVersion: "2.5.2.0",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/beatsaber-experimental-libs/releases/download/v2.5.2.0/INIFileParser-2.5.2.0.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/beatsaber-experimental-libs/releases/download/v2.5.2.0/INIFileParser-2.5.2.0.zip",
         }),
         fullModFromLatestRelease({
             id: BSUTILS_ID,
             name: "BS Utils",
             summary: "[Experimental 1.45.1 port] A basic library for beat saber mods to use.",
             category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/Beat-Saber-Utils",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/Beat-Saber-Utils",
+            owner: "experimental-beatsaber-mods",
             repo: "Beat-Saber-Utils",
             fallbackVersion: "1.14.4-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/Beat-Saber-Utils/releases/download/v1.14.4-bs1.45.1/BS_Utils-1.14.4-bs1.45.1-077404b.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/Beat-Saber-Utils/releases/download/v1.14.4-bs1.45.1/BS_Utils-1.14.4-bs1.45.1-077404b.zip",
             dependencies: [BSIPA_ID, INIPARSER_ID],
         }),
         fullModFromLatestRelease({
@@ -306,22 +306,22 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "BeatSaverSharp",
             summary: "[Experimental 1.45.1 port] A .NET library for interacting with the BeatSaver API. Unmodified upstream (Auros/BeatSaverSharper, Unity build) -- doesn't reference any game assemblies directly.",
             category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/BeatSaverSharper",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/BeatSaverSharper",
+            owner: "experimental-beatsaber-mods",
             repo: "BeatSaverSharper",
             fallbackVersion: "3.4.5-unity",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/BeatSaverSharper/releases/download/v3.4.5-unity/BeatSaverSharp-3.4.5-Unity.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/BeatSaverSharper/releases/download/v3.4.5-unity/BeatSaverSharp-3.4.5-Unity.zip",
         }),
         fullModFromLatestRelease({
             id: BEATSAVERDOWNLOADER_ID,
             name: "BeatSaverDownloader",
             summary: "[Experimental 1.45.1 port] Enables you to download songs from BeatSaver in-game.",
             category: BbmCategories.Core,
-            gitUrl: "https://github.com/TheMysticle/BeatSaverDownloader",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/BeatSaverDownloader",
+            owner: "experimental-beatsaber-mods",
             repo: "BeatSaverDownloader",
             fallbackVersion: "6.0.7-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/BeatSaverDownloader/releases/download/v6.0.7-bs1.45.1/BeatSaverDownloader-6.0.7-bs1.45.1-03f6fb3.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/BeatSaverDownloader/releases/download/v6.0.7-bs1.45.1/BeatSaverDownloader-6.0.7-bs1.45.1-03f6fb3.zip",
             dependencies: [BSIPA_ID, BSUTILS_ID, BSML_ID, SONGCORE_ID, BEATSAVERSHARP_ID, SCORESABERSHARP_ID],
         }),
         fullModFromLatestRelease({
@@ -329,11 +329,11 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "BeatSaverUpdater",
             summary: "[Experimental 1.45.1 port] Alerts you of updates to maps and updates them to the latest version.",
             category: BbmCategories.Core,
-            gitUrl: "https://github.com/TheMysticle/BeatSaverUpdater",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/BeatSaverUpdater",
+            owner: "experimental-beatsaber-mods",
             repo: "BeatSaverUpdater",
             fallbackVersion: "1.2.14-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/BeatSaverUpdater/releases/download/v1.2.14-bs1.45.1/BeatSaverUpdater-1.2.14-bs1.45.1-a9b14c1.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/BeatSaverUpdater/releases/download/v1.2.14-bs1.45.1/BeatSaverUpdater-1.2.14-bs1.45.1-a9b14c1.zip",
             dependencies: [BSIPA_ID, BSML_ID, SONGCORE_ID, SIRAUTIL_ID, BEATSAVERSHARP_ID],
         }),
         fullModFromLatestRelease({
@@ -341,11 +341,11 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "WhyIsThereNoLeaderboard",
             summary: "[Experimental 1.45.1 port] Clarifies why leaderboards on custom songs are not supported and lets you download one.",
             category: BbmCategories.Essential,
-            gitUrl: "https://github.com/TheMysticle/WhyIsThereNoLeaderboard",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/WhyIsThereNoLeaderboard",
+            owner: "experimental-beatsaber-mods",
             repo: "WhyIsThereNoLeaderboard",
             fallbackVersion: "1.0.3-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/WhyIsThereNoLeaderboard/releases/download/v1.0.3-bs1.45.1/WhyIsThereNoLeaderboard-1.0.3-bs1.45.1-ce72195.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/WhyIsThereNoLeaderboard/releases/download/v1.0.3-bs1.45.1/WhyIsThereNoLeaderboard-1.0.3-bs1.45.1-ce72195.zip",
             dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID],
         }),
         fullModFromLatestRelease({
@@ -353,11 +353,11 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "CustomJSONData",
             summary: "[Experimental 1.45.1 port] Lets mappers include arbitrary data in beatmaps, and lets modders access that data. Required by Heck/Noodle Extensions/Chroma. Confirmed working with real V2/V3-format maps on real hardware; V4 beatmap-format custom data support is new and not yet verified against real gameplay.",
             category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/CustomJSONData",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/CustomJSONData",
+            owner: "experimental-beatsaber-mods",
             repo: "CustomJSONData",
             fallbackVersion: "2.6.8-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/CustomJSONData/releases/download/v2.6.8-bs1.45.1/CustomJSONData.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/CustomJSONData/releases/download/v2.6.8-bs1.45.1/CustomJSONData.zip",
             dependencies: [BSIPA_ID],
         }),
         fullModFromLatestRelease({
@@ -365,12 +365,12 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "Heck",
             summary: "[Experimental 1.45.1 port] Shared framework library for Noodle Extensions and Chroma.",
             category: BbmCategories.Library,
-            gitUrl: "https://github.com/TheMysticle/Heck",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/Heck",
+            owner: "experimental-beatsaber-mods",
             repo: "Heck",
             assetName: "Heck.zip",
             fallbackVersion: "1.8.3-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/Heck.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/Heck.zip",
             dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID, CUSTOMJSONDATA_ID],
         }),
         fullModFromLatestRelease({
@@ -378,12 +378,12 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "Noodle Extensions",
             summary: "[Experimental 1.45.1 port] Custom note/environment/player animation for mappers.",
             category: BbmCategories.Gameplay,
-            gitUrl: "https://github.com/TheMysticle/Heck",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/Heck",
+            owner: "experimental-beatsaber-mods",
             repo: "Heck",
             assetName: "NoodleExtensions.zip",
             fallbackVersion: "1.7.21-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/NoodleExtensions.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/NoodleExtensions.zip",
             dependencies: [BSIPA_ID, SIRAUTIL_ID, CUSTOMJSONDATA_ID, HECK_ID],
         }),
         fullModFromLatestRelease({
@@ -391,12 +391,12 @@ export async function getExperimental1451Mods(): Promise<BbmFullMod[]> {
             name: "Chroma",
             summary: "[Experimental 1.45.1 port] Color/lighting extensions for mappers. Its light-registration internals were reworked for 1.45.1; confirmed working (colored lighting on real maps, no crashes) across an extended real-hardware session.",
             category: BbmCategories.Lighting,
-            gitUrl: "https://github.com/TheMysticle/Heck",
-            owner: "TheMysticle",
+            gitUrl: "https://github.com/experimental-beatsaber-mods/Heck",
+            owner: "experimental-beatsaber-mods",
             repo: "Heck",
             assetName: "Chroma.zip",
             fallbackVersion: "2.9.22-bs1.45.1",
-            fallbackDownloadUrl: "https://github.com/TheMysticle/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/Chroma.zip",
+            fallbackDownloadUrl: "https://github.com/experimental-beatsaber-mods/Heck/releases/download/v1.8.3-1.7.21-2.9.22-bs1.45.1/Chroma.zip",
             dependencies: [BSIPA_ID, BSML_ID, SIRAUTIL_ID, CUSTOMJSONDATA_ID, HECK_ID],
         }),
     ]);
