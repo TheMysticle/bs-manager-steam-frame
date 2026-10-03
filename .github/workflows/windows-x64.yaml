@@ -81,11 +81,18 @@ jobs:
                       cat > notes.md <<'EOF2'
                   BSManager for this fork, including the experimental Beat Saber 1.45.1 mod list.
 
-                  Windows SmartScreen will warn about an unknown publisher because the Windows
-                  installer is not code-signed: choose "More info" -> "Run anyway".
+                  **Windows x64:** `BSManager.Setup.*.exe` (unsigned installer — Windows SmartScreen
+                  will warn about an unknown publisher: choose "More info" -> "Run anyway").
 
-                  The ARM64 (Steam Frame) tarball and installer, if not already attached below, are
-                  uploaded separately to this same release.
+                  **Steam Frame (ARM64 Linux):** the tarball and `install-release.sh`, if not already
+                  attached below, are uploaded separately to this same release. One-line install:
+                  ```sh
+                  curl -fsSL https://raw.githubusercontent.com/TheMysticle/bs-manager-steam-frame/arm64-integration/packaging/install-release.sh | bash
+                  ```
+
+                  If you're comfortable with it, building from source (`git clone` + `./install.sh`)
+                  is recommended over either prebuilt download above — it's built and tested locally
+                  far more often than a release is cut, so it won't lag behind the latest fixes.
 
                   Unofficial fork of [BSManager](https://github.com/Zagrios/bs-manager).
                   EOF2
