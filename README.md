@@ -17,99 +17,6 @@ doesn't support yet.
 > over the prebuilt curl one-liner or a Release download — I build and test locally far more often
 > than I cut a release, so the prebuilt binaries can lag behind the latest fixes.
 
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-
-## What this fork changes, and why
-
-The Steam Frame runs SteamOS on ARM64, which BSManager's Linux support didn't
-originally handle: it looks for Wine at `files/bin/wine64` (the x86_64 Proton
-layout), and its Steam-shortcut/mod-install code makes a few assumptions that
-don't hold on ARM64 Proton.
-
-None of the fixes below originated in this repo. All of them are cherry-picked,
-with original authorship preserved, from work already submitted upstream:
-
-| Commit | What it does | Upstream status |
-|---|---|---|
-| `[fix] support ARM64 Proton Wine path` (jackwilsdon) | Recognizes `files/bin-arm64/wine`, the ARM64 Proton Wine binary path | **Merged** to `Zagrios/bs-manager` master ([#1118](https://github.com/Zagrios/bs-manager/pull/1118)) |
-| `[fix] install BSIPA through Proton` (jackwilsdon) | Runs BSIPA's `IPA.exe` injector via `proton runinprefix` instead of raw Wine, so it actually runs on ARM64 Proton (which needs Proton's own env/wineserver setup, and Proton Experimental's ARM64 Mono) | Open — [#1122](https://github.com/Zagrios/bs-manager/pull/1122) |
-| `[fix] detect Steam process on ARM64 Linux` (jackwilsdon) | ARM64 Steam's process name is `steamrtarm64/steam`, not `steam-runtime-launcher-service`; without this fix BSManager waits out a 60s timeout every launch | Open — [#1123](https://github.com/Zagrios/bs-manager/pull/1123) |
-| `[fix] generate valid Linux Steam shortcuts` (jackwilsdon) | Fixes `LaunchOptions` generation so `%command%` and env vars (including `WINEDLLOVERRIDES`) are placed in the order Steam actually expects | Open — [#1124](https://github.com/Zagrios/bs-manager/pull/1124) |
-
-**Credit:** the initial proof that this was possible at all came from
-[thebillington](https://github.com/thebillington/bs-manager)'s fork and
-[AUR packaging](https://github.com/thebillington/bs-manager-aur), written up
-in [a Reddit tutorial](https://www.reddit.com/r/SteamFrame/comments/1wq1b9x/bsmanager_rebuilt_for_steam_frame_volunteers_for/)
-for running BSManager on the Frame. That fork used a different technique for the
-BSIPA problem (manually replicating `IPA.exe`'s file-drop install instead of
-running it under Proton); this repo uses jackwilsdon's upstream-submitted
-Proton-based approach instead, since it runs the real injector rather than a
-hand-maintained re-implementation of its output, and it's already in review
-against upstream. Full credit to both for the ARM64 groundwork.
-
-This fork carries no BSManager code that isn't already public, upstream, and
-CI-passing on `Zagrios/bs-manager` — it's a stopgap, existing purely to make
-BSManager installable on the Frame *today* while PRs #1122–#1124 go through
-review. Once they land upstream, this whole repo stops being necessary and
-you should just use upstream BSManager directly.
-
-In the meantime, to save people the build step entirely, I'm planning to
-publish prebuilt aarch64 binaries under Releases along with a small script to
-set up the Steam shortcut.
-
-## The ARM64 tab and native ARM64 build: credit and changes
-
-The **ARM64 tab** feature itself — the UI, the install/uninstall flow, release
-matching against your Proton build, SHA-256 verification, re-applying the
-ARM64 mod-loader fixes after a BSIPA install, and foveated-rendering
-passthrough — is [Daniel Varga (DaVarga)](https://github.com/DaVarga)'s work,
-merged in from [DaVarga/bs-manager](https://github.com/DaVarga/bs-manager)
-(`[feat] install the native ARM64 build (bs-arm64) from a new ARM64 tab`,
-`[feat] turn on bs-arm64 foveated rendering...`). The native runtime it
-installs, [bs-arm64](https://github.com/DaVarga/bs-arm64), is also entirely
-his: reverse-engineering what it takes to run Beat Saber as genuine native
-ARM64 Windows code under Proton instead of x64-via-FEX, and building every
-native replacement component that takes (Steamworks, lsteamclient,
-wineopenxr, DXVK, the BSIPA Doorstop, all rebuilt for ARM64). None of that
-original engineering is changed here.
-
-What changed after merging it into this fork:
-
-- **[TheMysticle/bs-arm64](https://github.com/TheMysticle/bs-arm64)**: a fork
-  of DaVarga's runtime, ported from Beat Saber 1.44.1 (Unity 6000.0.40f1) to
-  **1.45.1** (Unity 6000.3.19f1) — see that repo's README for exactly what the
-  port changed. The ARM64 tab here now points at this fork's releases and
-  version list instead of DaVarga's 1.44.1-only ones.
-- Fixed a real bug in the actual "Play" launch path: `SteamLauncherService`
-  had its own separate Proton-selection call that never checked whether the
-  target instance was native-ARM64-patched, so clicking Play on one would
-  always use BSManager's main Proton setting and fail — regardless of the
-  ARM64 tab's own Proton-mismatch bookkeeping. Fixed as part of adding the
-  dedicated Proton setting below.
-- Added a second, dedicated **Native ARM64 Proton folder** setting (see
-  **Native ARM64 build** below) so BSManager's main Proton (for BSIPA) and
-  the Proton a native ARM64 instance needs can differ without manually
-  swapping one setting back and forth.
-- Fixed a regression the merge itself could have introduced in Steam-process
-  detection (`steam.service.ts`): combined DaVarga's dual process-name array
-  (needed because the ARM64 Steam client's process name differs from x86_64)
-  with this fork's existing trailing-space fix (avoiding a false match
-  against `steamwebhelper`), since the two changes touched the same lines
-  independently.
-- The ARM64 tab only ever installs into a BSManager-tracked instance, never
-  your actual Steam-installed copy directly — that's unchanged from DaVarga's
-  design. What's new is the **Steam Launch Options** path below, for
-  launching those already-patched files directly from your Steam library
-  instead of through BSManager, plus documenting exactly which Proton build
-  and env vars that requires.
-
 ## A note on how this was made
 
 I'm not a professional programmer. I do some Android development, but this
@@ -126,6 +33,16 @@ fair position; a lot of people here have spent years building real expertise.
 If you'd rather check things yourself, everything is open and the commits are
 small. Bug reports, reviews and corrections are very welcome, and I'll fix
 what I get wrong.
+
+## Contents
+
+- [Building / installing](#building--installing)
+  - [Uninstalling](#uninstalling)
+- [Mods only load via BSManager, not via Steam directly](#mods-only-load-via-bsmanager-not-via-steam-directly)
+- [Native ARM64 build: required Steam Launch Options](#native-arm64-build-required-steam-launch-options)
+- [Config](#config)
+- [What this fork changes, and why](#what-this-fork-changes-and-why) *(credit / technical detail)*
+- [The ARM64 tab and native ARM64 build: credit and changes](#the-arm64-tab-and-native-arm64-build-credit-and-changes) *(credit / technical detail)*
 
 ## Building / installing
 
@@ -148,6 +65,12 @@ git clone <this-repo-url>
 cd bs-manager-steam-frame
 ./install.sh
 ```
+
+> [!WARNING]
+> **Before you do anything else, set BSManager's Proton folder to Proton Experimental — not
+> Proton 11.0 or any other version.** Proton 11.0 is missing the ARM64 Mono runtime BSIPA's
+> installer needs, so pointing BSManager at anything else will make **BSIPA (mod) installation
+> fail**. See [Config](#config) below for where to set this, and why.
 
 `install.sh`:
 
@@ -191,7 +114,7 @@ already existed on your system before you ran `install.sh`, `uninstall.sh`
 leaves it alone rather than guessing. Pass `-y`/`--yes` to skip the
 confirmation prompt.
 
-## Known caveat: mods only load when launched via BSManager, not via Steam directly
+## Mods only load via BSManager, not via Steam directly
 
 BSManager sets `WINEDLLOVERRIDES=winhttp=n,b` when it launches Beat Saber
 itself — required so Wine loads the BSIPA-injected `winhttp.dll` instead of
@@ -213,13 +136,15 @@ If you re-create the Steam shortcut via BSManager *after* building from this
 fork, the generated `LaunchOptions` already come out correct and you shouldn't
 need this manual step.
 
-## Native ARM64 build (the ARM64 tab / bs-arm64) — Steam Launch Options are required
+## Native ARM64 build: required Steam Launch Options
+
+This covers launching the native ARM64 build ([bs-arm64](https://github.com/TheMysticle/bs-arm64),
+installed via the **ARM64 tab**) directly from your Steam library instead of through BSManager.
 
 > [!IMPORTANT]
-> **If you want to launch the native ARM64 build ([bs-arm64](https://github.com/TheMysticle/bs-arm64))
-> directly from your Steam library instead of through BSManager, you must add
-> these environment variables to Beat Saber's Steam Launch Options.** They are
-> not optional convenience settings — without them the native build will not
+> **If you want to launch the native ARM64 build directly from your Steam library instead of
+> through BSManager, you must add these environment variables to Beat Saber's Steam Launch
+> Options.** They are not optional convenience settings — without them the native build will not
 > start correctly (missing Steam/OpenXR integration, or a Vulkan device-creation
 > hang). Right-click Beat Saber in Steam → **Properties → General → Launch
 > Options**, and set it to exactly:
@@ -243,8 +168,8 @@ need this manual step.
 > against one specific Proton build; using a different one (including "Proton
 > Experimental (ARM64)") will not work, and bs-arm64's own tooling will refuse
 > to launch if it detects a mismatch. This is a **separate setting from
-> BSManager's own Proton install setting below** — they don't need to match,
-> and changing one doesn't affect the other.
+> BSManager's own Proton install setting** (see [Config](#config) below) — they
+> don't need to match, and changing one doesn't affect the other.
 
 BSManager itself has a dedicated **"Native ARM64 Proton folder"** setting
 (Settings, right below the main Proton folder) for exactly this: point it at
@@ -253,15 +178,15 @@ the same Proton build bs-arm64 was installed against, and BSManager's own
 bs-arm64-patched instance and launch it with that Proton automatically,
 instead of the main Proton folder setting. This is a **separate setting from
 BSManager's main Proton folder** (used to patch/launch regular instances,
-still Proton Experimental for BSIPA - see **Config** below); the two don't
-need to match, and BSManager picks whichever one applies per instance.
+still Proton Experimental for BSIPA — see [Config](#config) below); the two
+don't need to match, and BSManager picks whichever one applies per instance.
 
 This means, once both Proton folders are configured, BSManager's "Play"
 button works directly on an ARM64-patched instance without a Proton-mismatch
 error. Launching from your **Steam library** with the manual Launch Options
 above is still required if you want to start the game from Steam directly
 without going through BSManager at all (e.g. via Steam Input, a Steam
-shortcut/tile, or VR dashboard) - Steam has no way to know about BSManager's
+shortcut/tile, or VR dashboard) — Steam has no way to know about BSManager's
 per-instance Proton selection.
 
 ## Config
@@ -273,8 +198,9 @@ BSManager at your Proton install, e.g.
 If you plan to use the native ARM64 build, also set **Native ARM64 Proton
 folder** in Settings (right below the Proton folder above) to the exact
 Proton build bs-arm64 was installed against, e.g.
-`~/.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)` — see **Native
-ARM64 build** above for why this needs to be a separate setting.
+`~/.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)` — see
+[Native ARM64 build](#native-arm64-build-required-steam-launch-options) above for why this needs
+to be a separate setting.
 
 > [!WARNING]
 > **You must set this to Proton Experimental, not any other Proton version.**
@@ -289,5 +215,100 @@ ARM64 build** above for why this needs to be a separate setting.
 > this too — but that hasn't been verified end-to-end yet. Until it is,
 > **Proton Experimental (ARM64) remains the known-working, recommended
 > setting for BSManager's own Proton install**, independent of whatever
-> Proton you set for Beat Saber itself in Steam (see the native ARM64 section
-> above) — these are two separate settings and don't need to match.
+> Proton you set for Beat Saber itself in Steam (see
+> [Native ARM64 build](#native-arm64-build-required-steam-launch-options) above) — these are two
+> separate settings and don't need to match.
+
+<details>
+<summary><strong>What this fork changes, and why</strong> — credit and technical detail, click to expand</summary>
+
+## What this fork changes, and why
+
+The Steam Frame runs SteamOS on ARM64, which BSManager's Linux support didn't
+originally handle: it looks for Wine at `files/bin/wine64` (the x86_64 Proton
+layout), and its Steam-shortcut/mod-install code makes a few assumptions that
+don't hold on ARM64 Proton.
+
+None of the fixes below originated in this repo. All of them are cherry-picked,
+with original authorship preserved, from work already submitted upstream:
+
+| Commit | What it does | Upstream status |
+|---|---|---|
+| `[fix] support ARM64 Proton Wine path` (jackwilsdon) | Recognizes `files/bin-arm64/wine`, the ARM64 Proton Wine binary path | **Merged** to `Zagrios/bs-manager` master ([#1118](https://github.com/Zagrios/bs-manager/pull/1118)) |
+| `[fix] install BSIPA through Proton` (jackwilsdon) | Runs BSIPA's `IPA.exe` injector via `proton runinprefix` instead of raw Wine, so it actually runs on ARM64 Proton (which needs Proton's own env/wineserver setup, and Proton Experimental's ARM64 Mono) | Open — [#1122](https://github.com/Zagrios/bs-manager/pull/1122) |
+| `[fix] detect Steam process on ARM64 Linux` (jackwilsdon) | ARM64 Steam's process name is `steamrtarm64/steam`, not `steam-runtime-launcher-service`; without this fix BSManager waits out a 60s timeout every launch | Open — [#1123](https://github.com/Zagrios/bs-manager/pull/1123) |
+| `[fix] generate valid Linux Steam shortcuts` (jackwilsdon) | Fixes `LaunchOptions` generation so `%command%` and env vars (including `WINEDLLOVERRIDES`) are placed in the order Steam actually expects | Open — [#1124](https://github.com/Zagrios/bs-manager/pull/1124) |
+
+**Credit:** the initial proof that this was possible at all came from
+[thebillington](https://github.com/thebillington/bs-manager)'s fork and
+[AUR packaging](https://github.com/thebillington/bs-manager-aur), written up
+in [a Reddit tutorial](https://www.reddit.com/r/SteamFrame/comments/1wq1b9x/bsmanager_rebuilt_for_steam_frame_volunteers_for/)
+for running BSManager on the Frame. That fork used a different technique for the
+BSIPA problem (manually replicating `IPA.exe`'s file-drop install instead of
+running it under Proton); this repo uses jackwilsdon's upstream-submitted
+Proton-based approach instead, since it runs the real injector rather than a
+hand-maintained re-implementation of its output, and it's already in review
+against upstream. Full credit to both for the ARM64 groundwork.
+
+This fork carries no BSManager code that isn't already public, upstream, and
+CI-passing on `Zagrios/bs-manager` — it's a stopgap, existing purely to make
+BSManager installable on the Frame *today* while PRs #1122–#1124 go through
+review. Once they land upstream, this whole repo stops being necessary and
+you should just use upstream BSManager directly.
+
+In the meantime, to save people the build step entirely, I'm planning to
+publish prebuilt aarch64 binaries under Releases along with a small script to
+set up the Steam shortcut.
+
+</details>
+
+<details>
+<summary><strong>The ARM64 tab and native ARM64 build: credit and changes</strong> — credit and technical detail, click to expand</summary>
+
+## The ARM64 tab and native ARM64 build: credit and changes
+
+The **ARM64 tab** feature itself — the UI, the install/uninstall flow, release
+matching against your Proton build, SHA-256 verification, re-applying the
+ARM64 mod-loader fixes after a BSIPA install, and foveated-rendering
+passthrough — is [Daniel Varga (DaVarga)](https://github.com/DaVarga)'s work,
+merged in from [DaVarga/bs-manager](https://github.com/DaVarga/bs-manager)
+(`[feat] install the native ARM64 build (bs-arm64) from a new ARM64 tab`,
+`[feat] turn on bs-arm64 foveated rendering...`). The native runtime it
+installs, [bs-arm64](https://github.com/DaVarga/bs-arm64), is also entirely
+his: reverse-engineering what it takes to run Beat Saber as genuine native
+ARM64 Windows code under Proton instead of x64-via-FEX, and building every
+native replacement component that takes (Steamworks, lsteamclient,
+wineopenxr, DXVK, the BSIPA Doorstop, all rebuilt for ARM64). None of that
+original engineering is changed here.
+
+What changed after merging it into this fork:
+
+- **[TheMysticle/bs-arm64](https://github.com/TheMysticle/bs-arm64)**: a fork
+  of DaVarga's runtime, ported from Beat Saber 1.44.1 (Unity 6000.0.40f1) to
+  **1.45.1** (Unity 6000.3.19f1) — see that repo's README for exactly what the
+  port changed. The ARM64 tab here now points at this fork's releases and
+  version list instead of DaVarga's 1.44.1-only ones.
+- Fixed a real bug in the actual "Play" launch path: `SteamLauncherService`
+  had its own separate Proton-selection call that never checked whether the
+  target instance was native-ARM64-patched, so clicking Play on one would
+  always use BSManager's main Proton setting and fail — regardless of the
+  ARM64 tab's own Proton-mismatch bookkeeping. Fixed as part of adding the
+  dedicated Proton setting below.
+- Added a second, dedicated **Native ARM64 Proton folder** setting (see
+  [Native ARM64 build](#native-arm64-build-required-steam-launch-options) above) so BSManager's
+  main Proton (for BSIPA) and the Proton a native ARM64 instance needs can
+  differ without manually swapping one setting back and forth.
+- Fixed a regression the merge itself could have introduced in Steam-process
+  detection (`steam.service.ts`): combined DaVarga's dual process-name array
+  (needed because the ARM64 Steam client's process name differs from x86_64)
+  with this fork's existing trailing-space fix (avoiding a false match
+  against `steamwebhelper`), since the two changes touched the same lines
+  independently.
+- The ARM64 tab only ever installs into a BSManager-tracked instance, never
+  your actual Steam-installed copy directly — that's unchanged from DaVarga's
+  design. What's new is the **Steam Launch Options** path above, for
+  launching those already-patched files directly from your Steam library
+  instead of through BSManager, plus documenting exactly which Proton build
+  and env vars that requires.
+
+</details>
