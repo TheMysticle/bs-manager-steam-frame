@@ -6,7 +6,10 @@ name: Windows x64
 
 on:
     push:
-        tags: ["frame-v*-win"]
+        # Same tag namespace as the manually-uploaded ARM64 tarball (packaging/install-release.sh),
+        # so both platforms land in one release instead of "latest" pointing at whichever shipped
+        # last with no guarantee it carries every platform's asset (#3).
+        tags: ["frame-v*"]
     workflow_dispatch:
 
 permissions:
@@ -60,20 +63,32 @@ jobs:
                       release/build/latest.yml
                       release/build/SHA256SUMS
 
-            - name: Create release
+            - name: Publish Windows assets into this tag's release
               if: github.ref_type == 'tag'
               shell: bash
               env:
                   GH_TOKEN: ${{ github.token }}
               run: |
-                  cat > notes.md <<'EOF2'
-                  Windows x64 build of this fork (unsigned installer), including the experimental
-                  Beat Saber 1.45.1 mod list, so a Windows instance can be patched to 1.45.1.
+                  ASSETS=(release/build/*.exe release/build/latest.yml release/build/SHA256SUMS)
 
-                  Windows SmartScreen will warn about an unknown publisher because the installer is
-                  not code-signed: choose "More info" -> "Run anyway".
+                  # The ARM64 tarball for this same tag may already be uploaded by hand (it can't be
+                  # built on GitHub Actions), or it may land after this workflow runs -- either way,
+                  # both platforms belong in ONE release per tag, not one each. If the release already
+                  # exists, just add these assets to it instead of failing or creating a duplicate.
+                  if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+                      gh release upload "$GITHUB_REF_NAME" "${ASSETS[@]}" --clobber
+                  else
+                      cat > notes.md <<'EOF2'
+                  BSManager for this fork, including the experimental Beat Saber 1.45.1 mod list.
+
+                  Windows SmartScreen will warn about an unknown publisher because the Windows
+                  installer is not code-signed: choose "More info" -> "Run anyway".
+
+                  The ARM64 (Steam Frame) tarball and installer, if not already attached below, are
+                  uploaded separately to this same release.
 
                   Unofficial fork of [BSManager](https://github.com/Zagrios/bs-manager).
                   EOF2
-                  gh release create "$GITHUB_REF_NAME" release/build/*.exe release/build/latest.yml release/build/SHA256SUMS \
-                      --verify-tag --title "BSManager $GITHUB_REF_NAME (Windows x64)" --notes-file notes.md
+                      gh release create "$GITHUB_REF_NAME" "${ASSETS[@]}" \
+                          --verify-tag --title "BSManager $GITHUB_REF_NAME" --notes-file notes.md
+                  fi

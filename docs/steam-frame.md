@@ -9,6 +9,13 @@ curl -fsSL https://raw.githubusercontent.com/TheMysticle/bs-manager-steam-frame/
 It installs the latest prebuilt ARM64 release to `~/.local/opt/bs-manager` (no root needed) and adds it to
 the app menu (a `.desktop` entry with icon). Run it again any time to update.
 
+> [!TIP]
+> **I'd recommend building from source instead** (`git clone` + `./install.sh`, see
+> [Building / installing](../README.md#building--installing) in the README). I build and test
+> locally far more often than I cut a release, so a prebuilt release can lag behind the latest
+> commits — building from source gets you the current fixes and features. The one-liner above is
+> still here for anyone who'd rather skip the build step.
+
 There are two ways to run the command. On the Frame itself you type with the on-screen keyboard.
 From a PC over SSH you can use a real keyboard, or just paste.
 

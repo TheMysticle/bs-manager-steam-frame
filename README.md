@@ -12,6 +12,10 @@ doesn't support yet.
 > **[How to install on the Steam Frame](docs/steam-frame.md)**
 >
 > Unofficial; the original project is [Zagrios/bs-manager](https://github.com/Zagrios/bs-manager).
+>
+> I'd recommend building from source (see [Building / installing](#building--installing) below)
+> over the prebuilt curl one-liner or a Release download — I build and test locally far more often
+> than I cut a release, so the prebuilt binaries can lag behind the latest fixes.
 
 <!-- PROJECT SHIELDS -->
 <!--
@@ -124,6 +128,11 @@ small. Bug reports, reviews and corrections are very welcome, and I'll fix
 what I get wrong.
 
 ## Building / installing
+
+This is the way I actually use it myself, and the one I'd recommend: it builds straight from the
+latest commit, so you're not stuck waiting on me to cut a new Release. The prebuilt curl
+install/Release downloads (see [docs/steam-frame.md](docs/steam-frame.md)) are there for
+convenience, but they can lag behind what's in this repo.
 
 Requires SSH or terminal access to the Frame (enable Developer Mode and set an
 SSH password under Settings → Developer Settings on the device first).
