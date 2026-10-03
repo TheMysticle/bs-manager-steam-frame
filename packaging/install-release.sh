@@ -10,11 +10,12 @@
 # and run install.sh there instead.
 #
 # Usage:
-#   curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install-release.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/TheMysticle/bs-manager-steam-frame/arm64-integration/packaging/install-release.sh | bash
 
 set -euo pipefail
 
-RELEASE_URL="https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/bs-manager-frame-aarch64.tar.gz"
+REPO="TheMysticle/bs-manager-steam-frame"
+ASSET_NAME="bs-manager-frame-aarch64.tar.gz"
 APP_NAME="bs-manager"
 LOCAL_ROOT="${HOME}/.local"
 BIN_DIR="${LOCAL_ROOT}/bin"
@@ -29,7 +30,16 @@ die()  { printf '\033[1;31mERROR:\033[0m %s\n' "$1" >&2; exit 1; }
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
-log "Downloading latest release"
+# Not /releases/latest/download/: "latest" is whichever release was published last, which
+# may be a different platform's build (e.g. Windows) that has no aarch64 tarball. Instead,
+# take the newest release (the API lists newest first) that actually carries the asset.
+log "Finding the latest aarch64 release"
+RELEASE_URL="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=30" \
+    | grep -o "\"browser_download_url\": *\"[^\"]*/${ASSET_NAME}\"" \
+    | head -n1 | sed 's/.*: *"//; s/"$//')" || true
+[ -n "$RELEASE_URL" ] || die "no release of ${REPO} contains ${ASSET_NAME}"
+
+log "Downloading ${RELEASE_URL}"
 curl -fsSL "$RELEASE_URL" -o "$TMPDIR/release.tar.gz"
 
 log "Verifying archive integrity"
@@ -40,7 +50,7 @@ mkdir -p "$TMPDIR/extracted"
 tar -xzf "$TMPDIR/release.tar.gz" -C "$TMPDIR/extracted"
 
 log "Installing to ${OPT_DIR}"
-mkdir -p "$LOCAL_ROOT" "$BIN_DIR"
+mkdir -p "$BIN_DIR" "$(dirname "$OPT_DIR")"
 rm -rf "${OPT_DIR}.new"
 cp -r "$TMPDIR/extracted/app" "${OPT_DIR}.new"
 rm -rf "$OPT_DIR"

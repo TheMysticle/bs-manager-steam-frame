@@ -77,7 +77,7 @@ jobs:
 
                   Install or update (menu entry, BeatSaver OneClick links):
                   ```sh
-                  curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/install.sh | bash
+                  curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/arm64-integration/scripts/install-steam-frame.sh | bash
                   ```
                   Or download the AppImage and run it directly.
 

@@ -3,11 +3,11 @@
 This fork runs on the Steam Frame (ARM64 SteamOS). Installing it takes one command:
 
 ```sh
-curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/TheMysticle/bs-manager-steam-frame/arm64-integration/packaging/install-release.sh | bash
 ```
 
-It installs BSManager to `~/Applications/BSManager.AppImage`, adds it to the app menu (a `.desktop`
-entry with icon), and lets BeatSaver's **OneClick** buttons open it. BSManager then updates itself.
+It installs the latest prebuilt ARM64 release to `~/.local/opt/bs-manager` (no root needed) and adds it to
+the app menu (a `.desktop` entry with icon). Run it again any time to update.
 
 There are two ways to run the command. On the Frame itself you type with the on-screen keyboard.
 From a PC over SSH you can use a real keyboard, or just paste.
@@ -58,7 +58,7 @@ Answer `yes` to the fingerprint question the first time and enter the password. 
 install command:
 
 ```sh
-curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/TheMysticle/bs-manager-steam-frame/arm64-integration/packaging/install-release.sh | bash
 ```
 
 When it prints `done`, BSManager is in the Frame's **Launch program** list (see Option A, step 4).
@@ -99,9 +99,9 @@ Details: [bs-arm64](https://github.com/TheMysticle/bs-arm64).
 
 ## Update or remove
 
-- **Update:** BSManager offers updates itself. Running the install command again also updates.
+- **Update:** run the install command again.
 - **Remove:**
   ```sh
-  curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install.sh | bash -s -- --uninstall
+  rm -rf ~/.local/opt/bs-manager ~/.local/bin/bs-manager ~/.local/share/applications/bs-manager.desktop
   ```
   Your versions, maps and settings in `~/.local/share/BSManager` stay.

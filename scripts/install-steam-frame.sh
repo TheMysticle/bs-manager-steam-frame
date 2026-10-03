@@ -1,8 +1,8 @@
 #!/bin/bash
 # Install (or update) BSManager for the Steam Frame / ARM64 SteamOS.
 #
-#   curl -fsSL https://github.com/TheMysticle/bs-manager-steam-frame/releases/latest/download/install.sh | bash
-#   curl -fsSL .../install.sh | bash -s -- --uninstall
+#   curl -fsSL https://raw.githubusercontent.com/TheMysticle/bs-manager-steam-frame/arm64-integration/scripts/install-steam-frame.sh | bash
+#   curl -fsSL .../install-steam-frame.sh | bash -s -- --uninstall
 #
 # Puts the ARM64 AppImage at ~/Applications/BSManager.AppImage (a stable name, so
 # BSManager's auto-updater keeps replacing the same file), adds a menu entry with
@@ -34,16 +34,19 @@ uninstall() {
     log "BSManager removed (your data in ~/.local/share/BSManager is kept)"
 }
 
-# Newest release asset *-arm64.AppImage, and SHA256SUMS if the release has one
+# Newest release carrying a *-arm64.AppImage (not just /releases/latest, which may be
+# another platform's release), and its SHA256SUMS if it has one
 latest_release_urls() {
-    curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | python3 -c '
+    curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=30" | python3 -c '
 import json, sys
-assets = json.load(sys.stdin).get("assets", [])
-app = [a for a in assets if a["name"].endswith("-arm64.AppImage")]
-sums = [a for a in assets if a["name"] == "SHA256SUMS"]
-if not app:
-    sys.exit("no ARM64 AppImage in the latest release")
-print(app[0]["name"], app[0]["browser_download_url"], sums[0]["browser_download_url"] if sums else "")
+for rel in json.load(sys.stdin):
+    assets = rel.get("assets", [])
+    app = [a for a in assets if a["name"].endswith("-arm64.AppImage")]
+    if app:
+        sums = [a for a in assets if a["name"] == "SHA256SUMS"]
+        print(app[0]["name"], app[0]["browser_download_url"], sums[0]["browser_download_url"] if sums else "")
+        sys.exit(0)
+sys.exit("no release contains an ARM64 AppImage")
 '
 }
 
