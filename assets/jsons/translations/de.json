@@ -73,6 +73,7 @@
                 "unsupported": {
                     "NOT_LINUX_ARM64": "Nur unter ARM64-Linux verfügbar.",
                     "PROTON_NOT_ARM64": "Wähle in den Einstellungen ein ARM64-Proton (z. B. \"Proton 11.0 (ARM64)\").",
+                    "NO_RELEASE": "Noch kein bs-arm64-Release für deine Proton-Version ({proton}).",
                     "VERSION_NOT_SUPPORTED": "Für diese Beat-Saber-Version noch nicht verfügbar. Unterstützt: {versions}."
                 },
                 "notifications": {

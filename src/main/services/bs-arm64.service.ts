@@ -6,10 +6,12 @@ import log from "electron-log";
 import { Observable, lastValueFrom, tap } from "rxjs";
 import { BSVersion } from "shared/bs-version.interface";
 import {
+    BS_ARM64_FALLBACK_VERSIONS,
+    BS_ARM64_MANIFEST_ASSET,
     BS_ARM64_REPOSITORY,
-    BS_ARM64_SUPPORTED_VERSIONS,
     BsArm64Error,
     BsArm64InstallOptions,
+    BsArm64Manifest,
     BsArm64Progress,
     BsArm64Status,
     BsArm64Unsupported,
@@ -36,12 +38,47 @@ export type GithubRelease = {
 
 type InstalledRelease = { tag: string; dir: string | undefined };
 
+export type ReleaseAsset = { release: GithubRelease; asset: GithubRelease["assets"][number] };
+
+// What the newest release offers for a Proton build, and which game versions it supports
+export type ReleaseInfo = {
+    protonBuild: string | undefined;
+    match?: ReleaseAsset;
+    manifest?: BsArm64Manifest;
+    supportedVersions: string[];
+};
+
+// GitHub allows 60 unauthenticated API requests an hour; the status is asked for on every version view
+const RELEASE_INFO_TTL_MS = 10 * 60 * 1000;
+
+// Proton's version file says e.g. "proton-11.0-2c-arm64" for the tag "proton-11.0-2c"
+function isBuildOfProtonTag(protonBuild: string, protonTag: string): boolean {
+    return protonBuild === protonTag || protonBuild.startsWith(`${protonTag}-`);
+}
+
+/** Newest published release (GitHub lists them newest first); its manifest, if any, is the one to read. */
+export function newestBsArm64Release(releases: GithubRelease[]): GithubRelease | undefined {
+    return releases.find(release => !release.draft && !release.prerelease);
+}
+
 /**
- * Newest release asset built for the given Proton build. Assets are named
- * bs-arm64-<tag>-<PROTON_TAG>.tar.gz, and Proton's version file says e.g.
- * "proton-11.0-2c-arm64" for PROTON_TAG "proton-11.0-2c". GitHub lists releases newest first.
+ * The asset of a release to install for the given Proton build: the one its manifest names.
+ * A release can work with several Proton versions (e.g. 11.0-2c and 11.0-2e) from one tarball.
  */
-export function findBsArm64ReleaseAsset(releases: GithubRelease[], protonBuild: string | undefined) {
+export function findBsArm64ReleaseAsset(release: GithubRelease, manifest: BsArm64Manifest, protonBuild: string | undefined): ReleaseAsset | undefined {
+    if (!protonBuild) {
+        return undefined;
+    }
+    const entry = Object.entries(manifest.protonVersions).find(([protonTag]) => isBuildOfProtonTag(protonBuild, protonTag))?.[1];
+    const asset = entry && release.assets.find(a => a.name === entry.artifact);
+    return asset ? { release, asset } : undefined;
+}
+
+/**
+ * For releases without a manifest (this fork's v1.45.1-1.45.2 and older): the newest release
+ * asset named bs-arm64-<tag>-<PROTON_TAG>.tar.gz for the given Proton build.
+ */
+export function findBsArm64ReleaseAssetByName(releases: GithubRelease[], protonBuild: string | undefined): ReleaseAsset | undefined {
     if (!protonBuild) {
         return undefined;
     }
@@ -53,15 +90,27 @@ export function findBsArm64ReleaseAsset(releases: GithubRelease[], protonBuild: 
             if (!asset.name.startsWith(prefix) || !asset.name.endsWith(".tar.gz")) {
                 return false;
             }
-            const protonTag = asset.name.slice(prefix.length, -".tar.gz".length);
-            return protonBuild === protonTag || protonBuild.startsWith(`${protonTag}-`);
+            return isBuildOfProtonTag(protonBuild, asset.name.slice(prefix.length, -".tar.gz".length));
         });
 }
 
 /**
- * Installs the native ARM64 runtime from https://github.com/DaVarga/bs-arm64 into a
- * Beat Saber instance. The release matching the selected Proton build is downloaded,
- * verified and unpacked into BSManager's cache, and its bs-arm64.sh does the rest.
+ * What to install for a Proton build. With the newest release's manifest, that release decides
+ * (its Proton map and tested game versions); without one, fall back to asset names and the
+ * built-in version list.
+ */
+export function selectBsArm64Release(releases: GithubRelease[], manifest: BsArm64Manifest | undefined, protonBuild: string | undefined): ReleaseInfo {
+    const newest = newestBsArm64Release(releases);
+    if (newest && manifest) {
+        return { protonBuild, manifest, match: findBsArm64ReleaseAsset(newest, manifest, protonBuild), supportedVersions: manifest.bsVersions };
+    }
+    return { protonBuild, match: findBsArm64ReleaseAssetByName(releases, protonBuild), supportedVersions: BS_ARM64_FALLBACK_VERSIONS };
+}
+
+/**
+ * Installs the native ARM64 runtime (bs-arm64, see BS_ARM64_REPOSITORY) into a Beat Saber
+ * instance. The release matching the selected Proton build is downloaded, verified and
+ * unpacked into BSManager's cache, and its bs-arm64.sh does the rest.
  */
 export class BsArm64Service {
     private static instance: BsArm64Service;
@@ -77,6 +126,8 @@ export class BsArm64Service {
     private readonly localVersions = BSLocalVersionService.getInstance();
     private readonly installLocation = InstallationLocationService.getInstance();
     private readonly request = RequestService.getInstance();
+
+    private releaseInfo?: { info: ReleaseInfo; time: number };
 
     private constructor() {}
 
@@ -96,9 +147,25 @@ export class BsArm64Service {
 
         if (process.platform !== "linux" || process.arch !== "arm64") {
             status.unsupported = BsArm64Unsupported.NOT_LINUX_ARM64;
-        } else if (!tryit(() => this.linux.isArm64Wine("bs-arm64")).result) {
+            return status;
+        }
+        if (!tryit(() => this.linux.isArm64Wine("bs-arm64")).result) {
             status.unsupported = BsArm64Unsupported.PROTON_NOT_ARM64;
-        } else if (!BS_ARM64_SUPPORTED_VERSIONS.includes(version.BSVersion)) {
+            return status;
+        }
+
+        // Offline or GitHub unreachable: fall back to the built-in version list
+        const info = await this.getReleaseInfo().catch((error): undefined => {
+            log.warn("Could not get the bs-arm64 releases", error);
+            return undefined;
+        });
+        if (info && !info.match) {
+            status.unsupported = BsArm64Unsupported.NO_RELEASE;
+            return status;
+        }
+
+        status.supportedVersions = info?.supportedVersions ?? BS_ARM64_FALLBACK_VERSIONS;
+        if (!status.supportedVersions.includes(version.BSVersion)) {
             status.unsupported = BsArm64Unsupported.VERSION_NOT_SUPPORTED;
         }
 
@@ -152,14 +219,44 @@ export class BsArm64Service {
         return path.join(this.installLocation.cachePath(), "bs-arm64");
     }
 
-    /** Newest release built for the selected Proton build, downloaded and unpacked. */
-    private async prepareRelease(progress: (p: BsArm64Progress) => void): Promise<InstalledRelease> {
+    /** The newest release's asset for the selected Proton build and what it supports. Cached for a while. */
+    private async getReleaseInfo(): Promise<ReleaseInfo> {
         const protonBuild = this.linux.getProtonBuild("bs-arm64");
+        const cached = this.releaseInfo;
+        if (cached && cached.info.protonBuild === protonBuild && Date.now() - cached.time < RELEASE_INFO_TTL_MS) {
+            return cached.info;
+        }
+
         const { data: releases } = await this.request.getJSON<GithubRelease[]>(
             `https://api.github.com/repos/${BS_ARM64_REPOSITORY}/releases`
         );
+        const manifestAsset = newestBsArm64Release(releases)?.assets.find(asset => asset.name === BS_ARM64_MANIFEST_ASSET);
+        const manifest = manifestAsset ? await this.downloadManifest(manifestAsset.browser_download_url) : undefined;
+        const info = selectBsArm64Release(releases, manifest, protonBuild);
 
-        const match = findBsArm64ReleaseAsset(releases, protonBuild);
+        this.releaseInfo = { info, time: Date.now() };
+        return info;
+    }
+
+    private async downloadManifest(url: string): Promise<BsArm64Manifest> {
+        await fs.ensureDir(this.releasesDir());
+        const file = path.join(this.releasesDir(), `manifest-${Date.now()}.json`);
+        try {
+            await lastValueFrom(this.request.downloadFile(url, file));
+            const manifest: BsArm64Manifest = await fs.readJson(file);
+            if (!Array.isArray(manifest?.bsVersions) || !manifest.protonVersions || typeof manifest.protonVersions !== "object") {
+                throw new Error(`Invalid ${BS_ARM64_MANIFEST_ASSET}`);
+            }
+            return manifest;
+        } finally {
+            await fs.remove(file);
+        }
+    }
+
+    /** Newest release built for the selected Proton build, downloaded and unpacked. */
+    private async prepareRelease(progress: (p: BsArm64Progress) => void): Promise<InstalledRelease> {
+        this.releaseInfo = undefined;
+        const { protonBuild, match } = await this.getReleaseInfo();
 
         if (!match) {
             throw new CustomError(`No bs-arm64 release for ${protonBuild}`, BsArm64Error.NO_MATCHING_RELEASE, protonBuild);

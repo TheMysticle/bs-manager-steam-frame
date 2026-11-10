@@ -73,6 +73,7 @@
                 "unsupported": {
                     "NOT_LINUX_ARM64": "Only available on ARM64 Linux.",
                     "PROTON_NOT_ARM64": "Select an ARM64 Proton (e.g. \"Proton 11.0 (ARM64)\") in the settings.",
+                    "NO_RELEASE": "No bs-arm64 release for your Proton version ({proton}) yet.",
                     "VERSION_NOT_SUPPORTED": "Not available for this Beat Saber version yet. Supported: {versions}."
                 },
                 "notifications": {
