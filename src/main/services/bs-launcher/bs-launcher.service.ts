@@ -25,6 +25,7 @@ import { StaticConfigurationService } from "../static-configuration.service";
 import { SteamService } from "../steam.service";
 import { tryit } from "shared/helpers/error.helpers";
 import { LinuxService } from "../linux.service";
+import { BsArm64Service } from "../bs-arm64.service";
 import { VrRuntimeService } from "../vr-runtime.service";
 
 export class BSLauncherService {
@@ -272,14 +273,22 @@ export class BSLauncherService {
                     description: [shortcutName, launchOptions.version.color].join(" "), // <= Need color in description to help windows know that the shortcut is different
                 })
             ),
-            linux: async () => this.linux.createDesktopShortcut(
-                path.join(app.getPath("desktop"), `${shortcutName}.desktop`),
-                shortcutName,
-                await this.createShortcutPng(shortcutIconColor),
-                launchOptions,
-                await this.steam.getSteamPath(),
-                await this.localVersionService.getVersionPath(launchOptions.version)
-            )
+            linux: async () => {
+                const versionPath = await this.localVersionService.getVersionPath(launchOptions.version);
+                return this.linux.createDesktopShortcut(
+                    path.join(app.getPath("desktop"), `${shortcutName}.desktop`),
+                    shortcutName,
+                    await this.createShortcutPng(shortcutIconColor),
+                    launchOptions,
+                    await this.steam.getSteamPath(),
+                    versionPath,
+                    // Same command the Play button uses for a native ARM64 instance (see there)
+                    await BsArm64Service.getInstance().getLaunchCommand(versionPath).catch(err => {
+                        log.warn("Shortcut will start the native ARM64 instance with proton run directly", err);
+                        return undefined;
+                    })
+                );
+            }
         })
 
     }

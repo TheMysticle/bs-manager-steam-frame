@@ -1,4 +1,4 @@
-import { findBsArm64ReleaseAsset, GithubRelease } from "main/services/bs-arm64.service";
+import { findBsArm64ReleaseAsset, GithubRelease, parseBsArm64Result } from "main/services/bs-arm64.service";
 
 jest.mock("electron", () => ({ app: { getPath: () => "", getVersion: () => "0.0.0" } }));
 jest.mock("electron-log", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
@@ -46,5 +46,22 @@ describe("findBsArm64ReleaseAsset", () => {
     it("finds nothing without a Proton build or matching release", () => {
         expect(findBsArm64ReleaseAsset(releases, undefined)).toBeUndefined();
         expect(findBsArm64ReleaseAsset(releases, "proton-10.0-arm64")).toBeUndefined();
+    });
+});
+
+describe("parseBsArm64Result", () => {
+    it("returns the result line of a --json run, ignoring log lines around it", () => {
+        const lines = [
+            '{"type": "log", "message": "checking"}',
+            "not json at all",
+            '{"type": "result", "api": 1, "installed": true, "mods": true, "ready": false}',
+            '{"type": "log", "message": "done"}',
+        ];
+        expect(parseBsArm64Result(lines)).toEqual({ type: "result", api: 1, installed: true, mods: true, ready: false });
+    });
+
+    it("is undefined when no result line was printed", () => {
+        expect(parseBsArm64Result(['{"type": "log", "message": "x"}', "error: boom"])).toBeUndefined();
+        expect(parseBsArm64Result([])).toBeUndefined();
     });
 });

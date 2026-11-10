@@ -14,6 +14,7 @@ import {
     BsArm64Status,
     BsArm64Unsupported,
 } from "shared/models/bs-arm64/bs-arm64.model";
+import { BSLaunchError } from "shared/models/bs-launch/launch-event.model";
 import { CustomError } from "shared/models/exceptions/custom-error.class";
 import { tryit } from "shared/helpers/error.helpers";
 import { BsmShellLog, bsmSpawn } from "main/helpers/os.helpers";
@@ -35,6 +36,30 @@ export type GithubRelease = {
 };
 
 type InstalledRelease = { tag: string; dir: string | undefined };
+
+/** `status --json` of the installer, for releases that have it (0.4.0 and newer). */
+export type BsArm64ScriptStatus = {
+    api?: number;
+    installed: boolean;
+    mods: boolean;
+    // Launch works without installing again (Proton unchanged since install)
+    ready: boolean;
+};
+
+/** The `result` line of a `--json` run of the installer (one JSON object per line, result last). */
+export function parseBsArm64Result(lines: string[]): BsArm64ScriptStatus | undefined {
+    for (const line of [...lines].reverse()) {
+        try {
+            const parsed = JSON.parse(line);
+            if (parsed?.type === "result") {
+                return parsed;
+            }
+        } catch {
+            // not a JSON line
+        }
+    }
+    return undefined;
+}
 
 /**
  * Newest release asset built for the given Proton build. Assets are named
@@ -144,6 +169,61 @@ export class BsArm64Service {
         }
         log.info("BSIPA changed in a native ARM64 instance, re-applying the ARM64 mod loader fixes");
         await lastValueFrom(this.install(version, { mods: true }), { defaultValue: undefined });
+    }
+
+    // === Launch === //
+
+    /**
+     * Command that starts a native ARM64 instance through its release's `bs-arm64.sh launch`,
+     * or undefined when the instance should be started with a plain `proton run`: it isn't a
+     * native instance, its release files are gone, or the release predates `launch`/`status`
+     * (0.3.x and older: their launch backgrounds the game, so it couldn't be tracked).
+     *
+     * The script sets up everything itself (Proton and Steam variables, the mod loader
+     * override, foveated rendering) and, above all, starts Proton under Steam's reaper
+     * (`reaper SteamLaunch AppId=620980 -- proton run ...`) the way Steam starts every game.
+     * Without the reaper Steam treats the game as a non-VR app: the Frame's non-VR frame
+     * limiter applies (72 Hz) and the desktop window shows in the VR overlay. The script
+     * exec's into Proton, so the caller tracks the game as usual. Game arguments go after
+     * the trailing `--`.
+     */
+    public async getLaunchCommand(versionPath: string): Promise<string | undefined> {
+        const protonFolder = this.linux.getProtonFolder("bs-arm64");
+        // No ARM64 Proton configured: the plain path raises the proper BS_ARM64_PROTON_NOT_SET
+        if (!isBsArm64Installed(versionPath) || !protonFolder) {
+            return undefined;
+        }
+        const release = await this.readInstalledRelease(versionPath);
+        const script = release?.dir && path.join(release.dir, "bs-arm64.sh");
+        if (!script || !(await fs.pathExists(script))) {
+            log.warn("Native ARM64 instance without its release files in the cache; launching with proton run directly");
+            return undefined;
+        }
+        const status = await this.scriptStatus(versionPath, release);
+        if (!status) {
+            log.info(`bs-arm64 ${release.tag} has no status/launch support; launching with proton run directly`);
+            return undefined;
+        }
+        if (!status.ready) {
+            throw CustomError.fromError(
+                new Error(`Native ARM64 instance (${release.tag}) needs a reinstall`),
+                BSLaunchError.BS_ARM64_PROTON_MISMATCH
+            );
+        }
+        // Double quotes like the rest of the launch command ("<proton> run "<exe>""): it goes
+        // through bash from the launcher and into Exec= of desktop shortcuts
+        return `bash "${script}" launch "${versionPath}" --prefix "${this.linux.getCompatDataPath()}" --proton "${protonFolder}" --`;
+    }
+
+    /** The installer's view of the instance; undefined if the release has no `status` (0.3.x and older). */
+    private async scriptStatus(versionPath: string, release: InstalledRelease): Promise<BsArm64ScriptStatus | undefined> {
+        if (!release.dir || !(await fs.pathExists(path.join(release.dir, "bs_arm64")))) {
+            return undefined;
+        }
+        const lines: string[] = [];
+        await this.runInstaller(release.dir, ["status", this.quote(versionPath), ...this.prefixArgs(), "--json"],
+            p => p.log && lines.push(p.log));
+        return parseBsArm64Result(lines);
     }
 
     // === Release === //

@@ -121,7 +121,11 @@ export class LinuxService {
     public async buildEnvVariables(
         launchOptions: LaunchOption,
         steamPath: string,
-        bsFolderPath: string
+        bsFolderPath: string,
+        // Started through bs-arm64.sh (BsArm64Service.getLaunchCommand): the script sets the
+        // native ARM64 variables itself, and some of ours would fight it (its foveated rendering
+        // enables the fdm_injection layer that DISABLE_VULKAN_FDM_INJECTION_LAYER turns off)
+        options: { nativeLaunch?: boolean } = {}
     ): Promise<Record<string, string>> {
         // Create the compat data path if it doesn't exist.
         // If the user never ran Beat Saber through steam before
@@ -146,7 +150,7 @@ export class LinuxService {
             "OXR_NO_TEXTURE_SOURCE_ALPHA": "1",
         };
 
-        if (isBsArm64Installed(bsFolderPath)) {
+        if (isBsArm64Installed(bsFolderPath) && !options.nativeLaunch) {
             Object.assign(envVars, await this.buildBsArm64EnvVariables(steamPath, bsFolderPath));
         }
 
@@ -326,22 +330,24 @@ export class LinuxService {
         launchOptions: LaunchOption,
         steamPath: string,
         beatSaberFolderPath: string,
-        commandPrefix?: string
+        commandPrefix?: string,
+        // Full command starting a native ARM64 instance (BsArm64Service.getLaunchCommand);
+        // replaces "<proton> run <exe>", game arguments follow it
+        nativeLaunchCommand?: string
     ): Promise<string> {
-        commandPrefix ??= await this.getProtonPrefix("run", this.protonKindFor(beatSaberFolderPath));
         const launchEnv = await this.buildEnvVariables(
-            launchOptions, steamPath, beatSaberFolderPath
+            launchOptions, steamPath, beatSaberFolderPath, { nativeLaunch: !!nativeLaunchCommand }
         );
 
         const beatSaberExePath = path.join(beatSaberFolderPath, BS_EXECUTABLE);
+        const commandReplacement = nativeLaunchCommand
+            ?? `${commandPrefix ?? await this.getProtonPrefix("run", this.protonKindFor(beatSaberFolderPath))} "${beatSaberExePath}"`;
 
         const {
             env: parsedEnv,
             args: parsedArgs,
             cmdlet,
-        } = parseLaunchOptions(launchOptions.command, {
-            commandReplacement: `${commandPrefix} "${beatSaberExePath}"`,
-        });
+        } = parseLaunchOptions(launchOptions.command, { commandReplacement });
 
         const args = buildBsLaunchArgs(launchOptions);
         log.debug("Launch arguments:", args, "Parsed arguments:", parsedArgs);
@@ -367,11 +373,12 @@ export class LinuxService {
         icon: string,
         launchOptions: LaunchOption,
         steamPath: string,
-        beatSaberFolderPath: string
+        beatSaberFolderPath: string,
+        nativeLaunchCommand?: string
     ): Promise<boolean> {
         try {
             const command = await this.getCommand(
-                launchOptions, steamPath, beatSaberFolderPath
+                launchOptions, steamPath, beatSaberFolderPath, undefined, nativeLaunchCommand
             );
 
             const desktopEntry = [
