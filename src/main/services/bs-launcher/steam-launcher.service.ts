@@ -21,6 +21,7 @@ import { app } from "electron";
 import { parseLaunchOptions } from "main/helpers/launchOptions.helper";
 import { buildWindowsPowerShellArgs, getWindowsPowerShellPath } from "main/helpers/windows-powershell.helper";
 import { isBsArm64Installed } from "main/helpers/bs-arm64.helpers";
+import { BsArm64Service } from "../bs-arm64.service";
 
 const ELEVATED_HELPER_PID_TIMEOUT_MS = 60_000;
 const ELEVATED_HELPER_PID_PREFIX = "BSM_ADMIN_HELPER_PID:";
@@ -145,11 +146,13 @@ export class SteamLauncherService extends AbstractLauncherService implements Sto
 
     private readonly steam: SteamService;
     private readonly util: UtilsService;
+    private readonly bsArm64: BsArm64Service;
 
     private constructor(){
         super();
         this.steam = SteamService.getInstance();
         this.util = UtilsService.getInstance();
+        this.bsArm64 = BsArm64Service.getInstance();
     }
 
     private createOwnershipCleanup(
@@ -501,14 +504,18 @@ export class SteamLauncherService extends AbstractLauncherService implements Sto
             };
 
             // Linux setup
+            let nativeLaunchCommand: string | undefined;
             if (process.platform === "linux") {
                 if (launchOptions.admin) {
                     log.warn("Launching as admin is not supported on Linux! Starting the game as a normal user.");
                     launchOptions.admin = false;
                 }
 
+                // A native ARM64 instance starts through its release's bs-arm64.sh when it can:
+                // that runs Proton under Steam's reaper, so Steam treats it as the VR game it is
+                nativeLaunchCommand = await this.bsArm64.getLaunchCommand(bsFolderPath);
                 Object.assign(env, await this.linux.buildEnvVariables(
-                    launchOptions, steamPath, bsFolderPath
+                    launchOptions, steamPath, bsFolderPath, { nativeLaunch: !!nativeLaunchCommand }
                 ));
             }
 
@@ -518,7 +525,8 @@ export class SteamLauncherService extends AbstractLauncherService implements Sto
             } = parseLaunchOptions(launchOptions.command, {
                 commandReplacement: process.platform === "win32"
                     ? `"${bsExePath}"`
-                    : `${await this.linux.getProtonPrefix("run", isBsArm64Installed(bsFolderPath) ? "bs-arm64" : "default")} "${bsExePath}"`,
+                    : nativeLaunchCommand
+                        ?? `${await this.linux.getProtonPrefix("run", isBsArm64Installed(bsFolderPath) ? "bs-arm64" : "default")} "${bsExePath}"`,
             });
             this.updateEnvVariables(env, customEnv);
 

@@ -54,6 +54,9 @@ jest.mock("main/services/steam.service", () => ({
 jest.mock("main/services/linux.service", () => ({
     LinuxService: { getInstance: jest.fn(() => ({})) },
 }));
+jest.mock("main/services/bs-arm64.service", () => ({
+    BsArm64Service: { getInstance: jest.fn() },
+}));
 jest.mock("main/services/vr-runtime.service", () => ({
     VrRuntimeService: { getInstance: jest.fn(() => ({ getActiveRuntime: jest.fn().mockResolvedValue("UNKNOWN") })) },
 }));

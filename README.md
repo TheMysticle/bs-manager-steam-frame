@@ -176,7 +176,11 @@ BSManager itself has a dedicated **"Native ARM64 Proton folder"** setting
 the same Proton build bs-arm64 was installed against, and BSManager's own
 "Play" button (and any Steam shortcut it generates) will detect a
 bs-arm64-patched instance and launch it with that Proton automatically,
-instead of the main Proton folder setting. This is a **separate setting from
+instead of the main Proton folder setting. With a bs-arm64 release that has a
+`launch` command (0.4.0 and newer), BSManager starts the instance through the
+release's own `bs-arm64.sh launch`, which runs Proton under Steam's reaper the
+way Steam starts every game; without that, Steam treats it as a non-VR app and
+the Frame's non-VR frame limiter caps it at 72 Hz. This is a **separate setting from
 BSManager's main Proton folder** (used to patch/launch regular instances,
 still Proton Experimental for BSIPA — see [Config](#config) below); the two
 don't need to match, and BSManager picks whichever one applies per instance.
