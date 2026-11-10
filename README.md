@@ -286,8 +286,11 @@ What changed after merging it into this fork:
 - **[TheMysticle/bs-arm64](https://github.com/TheMysticle/bs-arm64)**: a fork
   of DaVarga's runtime, ported from Beat Saber 1.44.1 (Unity 6000.0.40f1) to
   **1.45.1** (Unity 6000.3.19f1) — see that repo's README for exactly what the
-  port changed. The ARM64 tab here now points at this fork's releases and
-  version list instead of DaVarga's 1.44.1-only ones.
+  port changed. The ARM64 tab here points at this fork's releases. Which
+  Proton builds a release works with, and which game versions it was tested
+  on, come from the `bs-arm64-manifest.json` each release ships (DaVarga's
+  format, 0.3.2 and later); a release without one falls back to matching
+  tarball names and a built-in version list.
 - Fixed a real bug in the actual "Play" launch path: `SteamLauncherService`
   had its own separate Proton-selection call that never checked whether the
   target instance was native-ARM64-patched, so clicking Play on one would
