@@ -66,11 +66,10 @@ cd bs-manager-steam-frame
 ./install.sh
 ```
 
-> [!WARNING]
-> **Before you do anything else, set BSManager's Proton folder to Proton Experimental — not
-> Proton 11.0 or any other version.** Proton 11.0 is missing the ARM64 Mono runtime BSIPA's
-> installer needs, so pointing BSManager at anything else will make **BSIPA (mod) installation
-> fail**. See [Config](#config) below for where to set this, and why.
+> [!NOTE]
+> **Point BSManager's Proton folder at Proton 11.0 (ARM64)** (Steam installs it the first time
+> you start a Windows game). It is the build the native ARM64 runtime needs, and BSIPA installs
+> through it as well, so one Proton covers both settings. See [Config](#config) below.
 
 `install.sh`:
 
@@ -177,9 +176,9 @@ the same Proton build bs-arm64 was installed against, and BSManager's own
 "Play" button (and any Steam shortcut it generates) will detect a
 bs-arm64-patched instance and launch it with that Proton automatically,
 instead of the main Proton folder setting. This is a **separate setting from
-BSManager's main Proton folder** (used to patch/launch regular instances,
-still Proton Experimental for BSIPA — see [Config](#config) below); the two
-don't need to match, and BSManager picks whichever one applies per instance.
+BSManager's main Proton folder** (used to patch/launch regular instances —
+see [Config](#config) below); the two don't need to match, and BSManager
+picks whichever one applies per instance.
 
 This means, once both Proton folders are configured, BSManager's "Play"
 button works directly on an ARM64-patched instance without a Proton-mismatch
@@ -193,7 +192,7 @@ per-instance Proton selection.
 
 On first launch, pick the default install location for game files, then point
 BSManager at your Proton install, e.g.
-`~/.local/share/Steam/steamapps/common/Proton - Experimental`.
+`~/.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)`.
 
 If you plan to use the native ARM64 build, also set **Native ARM64 Proton
 folder** in Settings (right below the Proton folder above) to the exact
@@ -202,22 +201,15 @@ Proton build bs-arm64 was installed against, e.g.
 [Native ARM64 build](#native-arm64-build-required-steam-launch-options) above for why this needs
 to be a separate setting.
 
-> [!WARNING]
-> **You must set this to Proton Experimental, not any other Proton version.**
-> Proton 11.0 is missing the ARM64 Mono runtime that BSIPA's installer needs
-> (see PR #1122) — pointing BSManager at anything other than Proton
-> Experimental will make **BSIPA (IPA) installation fail**.
->
-> This fork later merged in a workaround from [DaVarga/bs-manager](https://github.com/DaVarga/bs-manager)
-> (`getRunnableIpaPath` in `bs-mods-manager.service.ts`) that runs `IPA.exe`
-> forced to x86 (via FEX) instead of relying on
-> ARM64-native wine-mono, which in principle should make Proton 11.0 work for
-> this too — but that hasn't been verified end-to-end yet. Until it is,
-> **Proton Experimental (ARM64) remains the known-working, recommended
-> setting for BSManager's own Proton install**, independent of whatever
-> Proton you set for Beat Saber itself in Steam (see
-> [Native ARM64 build](#native-arm64-build-required-steam-launch-options) above) — these are two
-> separate settings and don't need to match.
+> [!NOTE]
+> **Proton 11.0 (ARM64) works for both settings.** Earlier versions of this README required
+> Proton Experimental for the main folder because Proton 11.0 lacks the ARM64 Mono runtime
+> BSIPA's installer needs (see PR #1122). This fork since merged DaVarga's workaround
+> (`getRunnableIpaPath` in `bs-mods-manager.service.ts`): `IPA.exe` runs as an x86 copy through
+> FEX, so it no longer depends on an ARM64 wine-mono. Verified on a Steam Frame with Proton
+> 11.0-2e (ARM64) as the only Proton installed: BSIPA installs and mods load. The two Proton
+> settings are still independent of whatever Proton you set for Beat Saber itself in Steam (see
+> [Native ARM64 build](#native-arm64-build-required-steam-launch-options) above).
 
 <details>
 <summary><strong>What this fork changes, and why</strong> — credit and technical detail, click to expand</summary>

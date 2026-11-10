@@ -277,19 +277,13 @@ export class BsModsManagerService {
             throw new CustomError("Could not find BSManager WINEPREFIX path", "no-wineprefix");
         }
 
-        // Wine looks up wineserver in PATH when it is not in its expected
-        // install layout (e.g. ARM64 Proton's files/bin-arm64). Proton itself
-        // prepends its bin dir to PATH, so do the same here.
-        const wineBinDir = path.dirname(winePathResult);
-        const envPath = process.env.PATH ? `${wineBinDir}:${process.env.PATH}` : wineBinDir;
-
+        // `proton runinprefix` sets up the environment itself, including PATH with its
+        // wine bin dir (files/bin-arm64 on ARM64 Proton) and WINEPREFIX.
         return {
             env: {
                 ...process.env,
                 STEAM_COMPAT_DATA_PATH: path.dirname(winePrefix),
                 STEAM_COMPAT_CLIENT_INSTALL_PATH: await SteamService.getInstance().getSteamPath(),
-                PATH: envPath,
-                WINEPREFIX: winePrefix
             },
             command: `${protonPrefix} ${command}`,
         };
